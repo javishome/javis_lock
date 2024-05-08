@@ -25,4 +25,4 @@ HOST1 = "javisco.com"
 HOST2 = "javishome.io"
 HOST3 = "javiscloud.com"
 
-SERVER_URL = "http://192.168.1.40:5000"
+SERVER_URL = "https://lock-api.javiscloud.com"
