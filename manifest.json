@@ -1,5 +1,5 @@
 {
-  "domain": "javis_lock",
+  "domain": "ttlock",
   "name": "Javis Lock",
   "after_dependencies": ["cloud"],
   "codeowners": ["@javishome"],
