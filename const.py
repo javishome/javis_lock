@@ -1,6 +1,6 @@
 """Constants for the TTLock integration."""
 
-DOMAIN = "ttlock"
+DOMAIN = "javis_lock"
 TT_API = "api"
 TT_LOCKS = "locks"
 
