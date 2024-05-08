@@ -1,4 +1,4 @@
-"""Services for ttlock integration."""
+"""Services for javis_lock integration."""
 
 from datetime import time
 import logging
@@ -40,7 +40,7 @@ class Services:
         self.hass = hass
 
     def register(self) -> None:
-        """Register services for ttlock integration."""
+        """Register services for javis_lock integration."""
 
         self.hass.services.register(
             DOMAIN,

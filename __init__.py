@@ -48,7 +48,7 @@ PLATFORMS: list[Platform] = [Platform.LOCK, Platform.SENSOR, Platform.BINARY_SEN
 
 _LOGGER = logging.getLogger(__name__)
 
-# file = open("/usr/share/hassio/homeassistant/custom_components/ttlock/log.txt", "w")
+# file = open("/usr/share/hassio/homeassistant/custom_components/javis_lock/log.txt", "w")
 
 async def get_mac():
     mac = uuid.UUID(int=uuid.getnode()).hex[-12:]

@@ -3,7 +3,7 @@ configure_passage_mode:
   description: Tries to configure passage mode for a lock (or set of locks)
   target:
     entity:
-      integration: ttlock
+      integration: javis_lock
       domain: lock
   fields:
     enabled:
@@ -78,7 +78,7 @@ create_passcode:
   description: Tries to create a new (temporary) passcode for a lock.
   target:
     entity:
-      integration: ttlock
+      integration: javis_lock
       domain: lock
   fields:
     passcode_name:
@@ -114,5 +114,5 @@ cleanup_passcodes:
   description: Lists all passcodes for the selected lock and deletes ALL expired passcodes (where the end of validity date is older is past).
   target:
     entity:
-      integration: ttlock
+      integration: javis_lock
       domain: lock
