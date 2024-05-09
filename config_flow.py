@@ -62,7 +62,7 @@ class GithubCustomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self.data = user_input
                     # Return the form of the next step.
                     _LOGGER.info("Login success")
-                    return self.async_create_entry(title="GitHub Custom", data=self.data)
+                    return self.async_create_entry(title="Javis Lock", data=self.data)
         except Exception as e:
             errors["base"] = str(e)
 
