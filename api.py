@@ -10,6 +10,7 @@ from typing import Any, cast
 from urllib.parse import urljoin
 from aiohttp import ClientResponse, ClientSession
 from .const import SERVER_URL
+import traceback
 
 
 from .models import (
@@ -63,7 +64,7 @@ class TTLockApi:
                 else:
                      _LOGGER.error(f"login error: {str(await response.text())}")
         except Exception as e:
-            _LOGGER.error(f"login error: {str(e)}")
+            _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
     
     async def ensure_valid_token(self):
         if not hasattr(self, "token"):
