@@ -20,9 +20,11 @@ CONF_WEEK_DAYS = "days"
 SVC_CONFIG_PASSAGE_MODE = "configure_passage_mode"
 SVC_CREATE_PASSCODE = "create_passcode"
 SVC_CLEANUP_PASSCODES = "cleanup_passcodes"
+SVC_LIST_PASSCODES = "list_passcodes"
 
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
 HOST3 = "javiscloud.com"
 
-SERVER_URL = "https://lock-api.javiscloud.com"
+# SERVER_URL = "https://special-adder-specially.ngrok-free.app"
+SERVER_URL = "https://lock-api."

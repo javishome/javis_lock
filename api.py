@@ -34,22 +34,21 @@ class RequestFailed(Exception):
 
 class TTLockApi:
     """Provide TTLock authentication tied to an OAuth2 based config entry."""
-
-    BASE = f"{SERVER_URL}/api/"
-
     def __init__(
         self,
         websession: ClientSession,
         username,
-        password
+        password,
+        url
     ) -> None:
         """Initialize TTLock auth."""
         self._web_session = websession
         self.username = username
         self.password = password
+        self.base_url = f"{url}/api/"
     
     async def login(self):
-        url_login = self.BASE + "login"
+        url_login = self.base_url + "login"
         data = {
             "username": self.username,
             "password": self.password
@@ -99,7 +98,7 @@ class TTLockApi:
         """Make GET request to the API with kwargs as query params."""
         log_id = token_hex(2)
 
-        url = urljoin(self.BASE, path)
+        url = urljoin(self.base_url, path)
         _LOGGER.debug("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
         resp = await self._web_session.get(
             url,
@@ -114,11 +113,11 @@ class TTLockApi:
         """Make GET request to the API with kwargs as query params."""
         log_id = token_hex(2)
 
-        url = urljoin(self.BASE, path)
-        _LOGGER.debug("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
+        url = urljoin(self.base_url, path)
+        _LOGGER.info("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
         resp = await self._web_session.post(
             url,
-            data=kwargs,
+            json=kwargs
         )
         return await self._parse_resp(resp, log_id)
     
@@ -194,20 +193,18 @@ class TTLockApi:
         if "errcode" in res and res["errcode"] != 0:
             _LOGGER.error("Failed to unlock %s: %s", lock_id, res["errmsg"])
             return False
-
-        return True
+        
+        return (await res.json())
 
     async def add_passcode(self, lock_id: int, config: AddPasscodeConfig) -> bool:
         """Add new passcode."""
-
+        _LOGGER.info(f"Passcode start create for {lock_id}")
         async with GW_LOCK:
             res = await self.post(
-                "keyboardPwd/add",
+                "keyboardPwd/get",
                 lockId=lock_id,
-                addType=2,  # via gateway
-                keyboardPwd=config.passcode,
                 keyboardPwdName=config.passcode_name,
-                keyboardPwdType=3,  # Only temporary passcode supported
+                keyboardPwdType=config.type,  # Only temporary passcode supported
                 startDate=config.start_minute,
                 endDate=config.end_minute,
             )
@@ -217,16 +214,21 @@ class TTLockApi:
                 "Failed to create passcode for %s: %s", lock_id, res["errmsg"]
             )
             return False
+        _LOGGER.info(f"Passcode created for {lock_id}")
+        _LOGGER.info("res: %s", res)
+        return res
 
-        return True
-
-    async def list_passcodes(self, lock_id: int) -> list[Passcode]:
+    async def list_passcodes(self, lock_id: int, is_parse = True) -> list[Passcode]:
         """Get currently configured passcodes from lock."""
 
         res = await self.get(
             "lock/listKeyboardPwd", lockId=lock_id
         )
-        return [Passcode.parse_obj(passcode) for passcode in res["list"]]
+        if is_parse:
+            return [Passcode.parse_obj(passcode) for passcode in res["list"]]
+        else:
+            _LOGGER.info("res list passcode: %s", res)
+            return res
 
     async def delete_passcode(self, lock_id: int, passcode_id: int) -> bool:
         """Delete a passcode from lock."""

@@ -48,7 +48,6 @@ PLATFORMS: list[Platform] = [Platform.LOCK, Platform.SENSOR, Platform.BINARY_SEN
 
 _LOGGER = logging.getLogger(__name__)
 
-# file = open("/usr/share/hassio/homeassistant/custom_components/javis_lock/log.txt", "w")
 
 async def get_mac():
     mac = uuid.UUID(int=uuid.getnode()).hex[-12:]
@@ -74,13 +73,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Set up TTLock from a config entry."""
         username = entry.data.get("username")
         password = entry.data.get("password")
-        
-        client = TTLockApi(aiohttp_client.async_get_clientsession(hass),username, password)
-
-        webhook_gen = WebhookHandler(hass, entry, client)
+        url = SERVER_URL + entry.data.get("url")
+        # url = SERVER_URL
+        _LOGGER.info(f"Setting up TTLock with url: {url}")
+        client = TTLockApi(aiohttp_client.async_get_clientsession(hass),username, password, url)
+        webhook_gen = WebhookHandler(hass, entry, client, url)
         await webhook_gen.setup()
-
-
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {TT_API: client}
         
         locks = [
@@ -114,11 +112,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 class WebhookHandler:
     """Responsible for setting up/processing webhook data."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client, url) -> None:
         """Init the thing."""
         self.hass = hass
         self.entry = entry
         self.client = client
+        self.url = url
 
     async def setup(self) -> None:
         _LOGGER.info("Setting up webhook")
@@ -164,9 +163,9 @@ class WebhookHandler:
             new_webhook_url = await refactor_webhook_url(webhook_url, mac, self.entry.data.get("url"))
             lock_ids = await self.client.get_locks()
             websession = aiohttp_client.async_get_clientsession(self.hass)
-            
-
-            async with websession.post(f"{SERVER_URL}/api/add_webhook", 
+            _LOGGER.info(f"Registering webhook at old url {webhook_url}")
+            _LOGGER.info(f"Registering webhook at new url {new_webhook_url}")
+            async with websession.post(f"{self.url}/api/add_webhook", 
                                 json={"webhook_url": new_webhook_url, 
                                     "mac": mac,
                                     "lock_ids": lock_ids}) as response:

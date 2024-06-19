@@ -88,14 +88,41 @@ create_passcode:
       default: My passcode name
       selector:
         text:
-    passcode:
-      name: Passcode
-      description: The passcode that will be typed by the user to unlock the lock. (4-9 digits)
+    type:
+      name: Type of passcode
+      description: What type of passcode should be created
       required: true
-      default: ""
+      default: "1"
       selector:
-        text:
-          type: number
+        select:
+          options:
+            - label: Một lần (Mã này chỉ có hiệu lực một lần trong vòng 6 giờ kể từ Thời gian bắt đầu)
+              value: "1"
+            - label: Vĩnh viễn (Mã này phải được sử dụng ít nhất một lần trong vòng 24 giờ sau Thời gian bắt đầu, nếu không nó sẽ không còn hiệu lực)
+              value: "2"
+            - label: Thời hạn (Mã này phải được sử dụng ít nhất một lần trong vòng 24 giờ sau Thời gian bắt đầu, nếu không nó sẽ không còn hiệu lực)
+              value: "3"
+            - label: Chu kì cuối tuần (Mã này chỉ có hiệu lực vào thứ 7 và chủ nhật)
+              value: "5"
+            - label: Chu kì hàng ngày (Mã này có hiệu lực vào mỗi ngày trong tuần)
+              value: "6"
+            - label: Chu kì ngày làm việc (Mã này chỉ có hiệu lực vào các ngày làm việc từ thứ 2 đến thứ 6)
+              value: "7"
+            - label: Chu kì thứ 2 (Mã này chỉ có hiệu lực vào thứ 2)
+              value: "8"
+            - label: Chu kì thứ 3 (Mã này chỉ có hiệu lực vào thứ 3)
+              value: "9"
+            - label: Chu kì thứ 4 (Mã này chỉ có hiệu lực vào thứ 4)
+              value: "10"
+            - label: Chu kì thứ 5 (Mã này chỉ có hiệu lực vào thứ 5)
+              value: "11"
+            - label: Chu kì thứ 6 (Mã này chỉ có hiệu lực vào thứ 6)
+              value: "12"
+            - label: Chu kì thứ 7 (Mã này chỉ có hiệu lực vào thứ 7)
+              value: "13"
+            - label: Chu kì chủ nhật (Mã này chỉ có hiệu lực vào thứ chủ nhật)
+              value: "14"
+          multiple: False
     start_time:
       name: Start date / time
       description: What date/time pass code will become valid
@@ -112,6 +139,14 @@ create_passcode:
 cleanup_passcodes:
   name: Remove expired passcodes
   description: Lists all passcodes for the selected lock and deletes ALL expired passcodes (where the end of validity date is older is past).
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+
+list_passcodes:
+  name: Danh sách mật mã.
+  description: Danh sách mật mã.
   target:
     entity:
       integration: javis_lock

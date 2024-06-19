@@ -16,15 +16,16 @@ _LOGGER = logging.getLogger(__name__)
 AUTH_SCHEMA = vol.Schema(
     {vol.Required(CONF_USERNAME): cv.string, 
      vol.Required(CONF_PASSWORD): cv.string,
-     vol.Required(CONF_URL, default=HOST1): vol.In(
+     vol.Required(CONF_URL, default=HOST3): vol.In(
                     [HOST1, HOST2, HOST3]
                 )}
 )
 
-lock_server_url = f"{SERVER_URL}/api/login"
 
-async def login(username: str, password: str):
-    url_login = lock_server_url
+
+async def login(username: str, password: str, url_cloud: str):
+    url_login = SERVER_URL + url_cloud + "/api/login"
+    # url_login = SERVER_URL
     data = {
         "username": username,
         "password": password
@@ -52,7 +53,7 @@ class GithubCustomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         try:
             if user_input is not None:
                 try:
-                    session = await login(user_input[CONF_USERNAME], user_input[CONF_PASSWORD])
+                    session = await login(user_input[CONF_USERNAME], user_input[CONF_PASSWORD], user_input[CONF_URL])
                     if not session.get("is_success"):
                         errors["base"] = session.get("error")
                 except ValueError:
