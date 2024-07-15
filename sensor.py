@@ -44,6 +44,8 @@ class LockBattery(BaseLockEntity, SensorEntity):
 
     def _update_from_coordinator(self) -> None:
         """Fetch state from the device."""
+        mac = self.coordinator.data.mac.replace(":","").lower()
+        self.entity_id = f"sensor.ttlock_{mac}_battery"
         self._attr_name = f"{self.coordinator.data.name} Battery"
         self._attr_native_value = self.coordinator.data.battery_level
 
@@ -53,6 +55,8 @@ class LockOperator(BaseLockEntity, RestoreEntity, SensorEntity):
 
     def _update_from_coordinator(self) -> None:
         """Fetch state from the device."""
+        mac = self.coordinator.data.mac.replace(":","").lower()
+        self.entity_id = f"sensor.ttlock_{mac}_last_operator"
         self._attr_name = f"{self.coordinator.data.name} Last Operator"
         if self.coordinator.data.last_user:
             self._attr_native_value = self.coordinator.data.last_user
@@ -75,6 +79,8 @@ class LockTrigger(BaseLockEntity, RestoreEntity, SensorEntity):
 
     def _update_from_coordinator(self) -> None:
         """Fetch state from the device."""
+        mac = self.coordinator.data.mac.replace(":","").lower()
+        self.entity_id = f"sensor.ttlock_{mac}_last_trigger"
         self._attr_name = f"{self.coordinator.data.name} Last Trigger"
         if self.coordinator.data.last_reason:
             self._attr_native_value = self.coordinator.data.last_reason

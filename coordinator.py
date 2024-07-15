@@ -99,6 +99,7 @@ def coordinator_for(
     for entry in hass.config_entries.async_entries(DOMAIN):
         for coordinator in lock_coordinators(hass, entry):
             for entity in coordinator.entities:
+                _LOGGER.info("Checking %s", entity.entity_id)
                 if entity.entity_id == entity_id:
                     return coordinator
     return None

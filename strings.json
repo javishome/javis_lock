@@ -1,18 +1,18 @@
 {
   "config": {
     "error": {
-      "auth": "The auth token provided is not valid.",
-      "invalid_path": "The path provided is not valid. Should be in the format `user/repo-name`."
+      "auth": "Mã thông báo xác thực được cung cấp không hợp lệ.",
+      "invalid_path": "Đường dẫn được cung cấp không hợp lệ. Phải ở định dạng `user/repo-name`."
     },
     "step": {
       "user": {
         "data": {
-          "username": "Username (e.g. email or +84987654321)",
-          "password": "Password",
-          "url": "URL"
+          "username": "Tài khoản (e.g. email or +84987654321)",
+          "password": "Mật khẩu",
+          "url": "Chọn cloud"
         },
-        "description": "Enter your Ttlock credentials.",
-        "title": "Authentication"
+        "description": "Đăng nhập tài khoản TTlock.",
+        "title": "Xác thực tài khoản."
       }
     }
   },

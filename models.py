@@ -134,12 +134,10 @@ class Passcode(BaseModel):
 class AddPasscodeConfig(BaseModel):
     """The passcode creation configuration."""
 
-    passcode: str = Field(None, alias="passcode")
+    type: str = Field(None, alias="type")
     passcode_name: str = Field(None, alias="passcodeName")
     start_minute: int = Field(0, alias="startDate")
     end_minute: int = Field(0, alias="endDate")
-
-
 class Action(Enum):
     """Lock action from an event."""
 
