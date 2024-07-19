@@ -29,7 +29,7 @@ class Lock(BaseLockEntity, LockEntity):
 
     def _update_from_coordinator(self) -> None:
         """Fetch state from the device."""
-        self.entity_id = f"lock.{self.coordinator.data.mac.replace(':', '').lower()}"
+        self.entity_id = f"lock.ttlock_{self.coordinator.data.mac.replace(':', '').lower()}"
         self._attr_name = self.coordinator.data.name
 
         self._attr_is_locked = self.coordinator.data.locked

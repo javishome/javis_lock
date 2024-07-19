@@ -204,7 +204,7 @@ class TTLockApi:
                 "keyboardPwd/get",
                 lockId=lock_id,
                 keyboardPwdName=config.passcode_name,
-                keyboardPwdType=config.type,  # Only temporary passcode supported
+                keyboardPwdType=config.type,
                 startDate=config.start_minute,
                 endDate=config.end_minute,
             )
@@ -229,8 +229,20 @@ class TTLockApi:
         else:
             _LOGGER.info("res list passcode: %s", res)
             return res
+        
+    async def list_unlock_records(self, lock_id: int,page_no:int, page_size:int, is_parse = False):
+        """Get currently configured passcodes from lock."""
 
-    async def delete_passcode(self, lock_id: int, passcode_id: int) -> bool:
+        res = await self.get(
+            "lockRecord/list", lockId=lock_id, pageNo=page_no, pageSize=page_size
+        )
+        if is_parse:
+            return [Passcode.parse_obj(passcode) for passcode in res["list"]]
+        else:
+            _LOGGER.info("res list unlock records: %s", res)
+            return res
+
+    async def delete_passcode(self, lock_id: int, passcode_id: int):
         """Delete a passcode from lock."""
 
         async with GW_LOCK:
@@ -241,12 +253,19 @@ class TTLockApi:
                 keyboardPwdId=passcode_id,
             )
 
-        if "errcode" in resDel and resDel["errcode"] != 0:
-            _LOGGER.error(
-                "Failed to delete passcode for %s: %s",
-                lock_id,
-                resDel["errmsg"],
-            )
-            return False
+        return resDel
+    
+    async def change_passcode(self, lock_id: int, keyboardPwdId: int, newKeyboardPwd: str, keyboardPwdName: str):
+        """Delete a passcode from lock."""
 
-        return True
+        async with GW_LOCK:
+            resDel = await self.post(
+                "keyboardPwd/change",
+                lockId=lock_id,
+                keyboardPwdId=keyboardPwdId,
+                keyboardPwdName=keyboardPwdName,
+                newKeyboardPwd=newKeyboardPwd
+            )
+
+
+        return resDel

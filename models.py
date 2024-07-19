@@ -106,10 +106,19 @@ class PassageModeConfig(BaseModel):
 class PasscodeType(IntEnum):
     """Type of passcode."""
 
-    unknown = 0
+    onetime = 1
     permanent = 2
-    temporary = 3
-
+    period = 3
+    weekend_cyclic = 5
+    daily_cyclic = 6
+    workday_cyclic = 7
+    monday_cyclic = 8
+    tuesday_cyclic = 9
+    wednesday_cyclic = 10
+    thursday_cyclic = 11
+    friday_cyclic = 12
+    saturday_cyclic = 13
+    sunday_cyclic = 14
 
 class Passcode(BaseModel):
     """A single passcode on a lock."""
@@ -124,7 +133,7 @@ class Passcode(BaseModel):
     @property
     def expired(self) -> bool:
         """True if the passcode expired."""
-        if self.type == PasscodeType.temporary:
+        if self.type == PasscodeType.onetime or self.type == PasscodeType.period:
             return self.end_date < dt.now()
 
         # Assume not

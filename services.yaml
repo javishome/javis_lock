@@ -126,13 +126,13 @@ create_passcode:
     start_time:
       name: Start date / time
       description: What date/time pass code will become valid
-      required: true
+      required: False
       selector:
         datetime:
     end_time:
       name: End date / time
       description: What date/time pass code will become invalid
-      required: true
+      required: False
       selector:
         datetime:
 
@@ -144,6 +144,30 @@ cleanup_passcodes:
       integration: javis_lock
       domain: lock
 
+list_unlock_records:
+  name: List unlock records
+  description: Lists all unlock records for the selected lock.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    page_no:
+      name: Page number
+      description: Page number
+      required: true
+      default: "1"
+      selector:
+        text:
+    page_size:
+      name: Page size
+      description: Page size
+      required: true
+      default: "20"
+      selector:
+        text:
+
+
 list_passcodes:
   name: Danh sách mật mã.
   description: Danh sách mật mã.
@@ -151,3 +175,46 @@ list_passcodes:
     entity:
       integration: javis_lock
       domain: lock
+
+delete_passcode:
+  name: Xóa mật mã.
+  description: Xóa mật mã
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    keyboardPwdId:
+      name: Passcode ID
+      description: Passcode ID
+      required: true
+      selector:
+        text:
+
+change_passcode:
+  name: Thay đổi mật mã.
+  description: Thay đổi mật mã
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    keyboardPwdId:
+      name: Passcode ID
+      description: Passcode ID
+      required: true
+      selector:
+        text:
+    keyboardPwdName:
+      name: Pass code name
+      description: The unique name of this pass code (Can be whatever you like)
+      required: False
+      selector:
+        text:
+    newKeyboardPwd:
+      name: New passcode
+      description: New passcode
+      required: False
+      selector:
+        text:
+    
