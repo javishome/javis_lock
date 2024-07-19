@@ -1,6 +1,7 @@
 """Services for javis_lock integration."""
+"""Services for javis_lock integration."""
 
-from datetime import time
+from datetime import datetime, time
 import logging
 
 import voluptuous as vol
@@ -189,24 +190,41 @@ class Services:
         """Create a new passcode for the given entities."""
         try:
             _LOGGER.info(f"Creating passcode for {call.data.get('passcode_name')}")
-            if int(call.data.get("type")) >= 5 and \
-                (call.data.get("start_time") is None or call.data.get("end_time") is None):
-                return {"error": "One time and permanent type need start time and end time."}
-            if call.data.get("start_time"):
-                start_time_val = call.data.get("start_time") 
+
+            if int(call.data.get("type")) <= 2:
+                start_time = 0
+                end_time = 0
+            elif int(call.data.get("type")) == 3:
+                if call.data.get("start_time") is None or call.data.get("end_time") is None:
+                    return {"error": "Need start time and end time with period passcode."}
+                start_time_val = call.data.get("start_time")
                 start_time_utc = as_utc(start_time_val)
                 start_time_ts = int(start_time_utc.timestamp() / 3600) * 3600
                 start_time = start_time_ts * 1000
-            else:
-                start_time = 0
 
-            if call.data.get("end_time"):
                 end_time_val = call.data.get("end_time")
                 end_time_utc = as_utc(end_time_val)
                 end_time_ts = int(end_time_utc.timestamp() / 3600) * 3600
                 end_time = end_time_ts * 1000
+                if start_time >= end_time:
+                    return {"error": "Start time must be less than end time."}
             else:
-                end_time = 0
+                if call.data.get("start_time") is None or call.data.get("end_time") is None:
+                    return {"error": "Need start time and end time with cyclic passcode."}
+                start_time_val = call.data.get("start_time")
+                start_time_val = datetime.now().replace(hour=start_time_val.hour, minute=start_time_val.minute, second=start_time_val.second)
+                start_time_utc = as_utc(start_time_val)
+                start_time_ts = int(start_time_utc.timestamp() / 3600) * 3600
+                start_time = start_time_ts * 1000
+
+                end_time_val = call.data.get("end_time")
+                end_time_val = datetime.now().replace(hour=end_time_val.hour, minute=end_time_val.minute, second=end_time_val.second)
+                end_time_utc = as_utc(end_time_val)
+                end_time_ts = int(end_time_utc.timestamp() / 3600) * 3600
+                end_time = end_time_ts * 1000
+                if start_time >= end_time:
+                    return {"error": "Start time must be less than end time."}
+
 
             config = AddPasscodeConfig(
                 type=call.data.get("type"),
@@ -235,6 +253,7 @@ class Services:
         
         return res
 
+
     async def handle_cleanup_passcodes(self, call: ServiceCall) -> ServiceResponse:
         """Clean up expired passcodes for the given entities."""
         removed = []
@@ -246,8 +265,8 @@ class Services:
             if code.expired:
                 await coordinator.api.delete_passcode(coordinator.lock_id, code.id)
                 removed.append(code.name)
-
         return {"removed": removed}
+
     
     async def handle_list_unlock_records(self, call: ServiceCall) -> ServiceResponse:
         coordinator = self._get_coordinator(call)
@@ -255,6 +274,7 @@ class Services:
         if coordinator:
             return await coordinator.api.list_unlock_records(coordinator.lock_id, int(call.data.get("page_no")), int(call.data.get("page_size")))
         return {"error": "No coordinator found for the given entity."}
+    
     
     async def handle_delete_passcode(self, call: ServiceCall) -> ServiceResponse:
         coordinator = self._get_coordinator(call)
