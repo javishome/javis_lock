@@ -26,6 +26,7 @@ from homeassistant.helpers import (
     config_entry_oauth2_flow,
     issue_registry as ir,
 )
+from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.network import NoURLAvailableError
 import uuid
@@ -59,11 +60,20 @@ async def refactor_webhook_url(webhook_url, mac, host):
     new_webhook_url = base_url +  webhook_url.split("/api/webhook")[1]
     return new_webhook_url
 
+def is_new_version():
+    year,version = ha_version.split('.')[:2]
+    if int(year) >= 2024 and int(version) >= 7:
+        return True
+    return False
+
     
 
 def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the TTLock component."""
-    Services(hass).register()
+    if is_new_version():
+        Services(hass).register_new()
+    else:
+        Services(hass).register_old()
 
     return True
 

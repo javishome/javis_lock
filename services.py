@@ -44,27 +44,8 @@ class Services:
         """Initialize the service singleton."""
         self.hass = hass
 
-    def register(self) -> None:
+    def register_old(self) -> None:
         """Register services for javis_lock integration."""
-        #tạm thời bỏ lại vì chưa dùng
-        # self.hass.services.async_register(
-        #     DOMAIN,
-        #     SVC_CONFIG_PASSAGE_MODE,
-        #     self.handle_configure_passage_mode,
-        #     schema=vol.Schema(
-        #         {
-        #             vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
-        #             vol.Required(CONF_ENABLED): cv.boolean,
-        #             vol.Optional(CONF_AUTO_UNLOCK, default=False): cv.boolean,
-        #             vol.Optional(CONF_ALL_DAY, default=False): cv.boolean,
-        #             vol.Optional(CONF_START_TIME, default=time()): cv.time,
-        #             vol.Optional(CONF_END_TIME, default=time()): cv.time,
-        #             vol.Optional(CONF_WEEK_DAYS, default=WEEKDAYS): cv.weekdays,
-        #         }
-        #     ),
-        #     supports_response=SupportsResponse.OPTIONAL,
-        # )
-
         #Tạo passcode
         self.hass.services.async_register(
             DOMAIN,
@@ -140,6 +121,98 @@ class Services:
 
         #change passcode
         self.hass.services.async_register(
+            DOMAIN,
+            SVC_CHANGE_PASSCODE,
+            self.handle_change_passcode,
+            vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                    vol.Required("keyboardPwdId"): cv.string,
+                    vol.Optional("keyboardPwdName"): cv.string,
+                    vol.Optional("newKeyboardPwd"): cv.string,
+                }
+                
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+    
+    def register_new(self) -> None:
+        """Register services for javis_lock integration."""
+        #Tạo passcode
+        self.hass.services.register(
+            DOMAIN,
+            SVC_CREATE_PASSCODE,
+            self.handle_create_passcode,
+            vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                    vol.Required("passcode_name"): cv.string,
+                    vol.Required("type"): cv.string,
+                    vol.Optional("start_time"): cv.datetime,
+                    vol.Optional("end_time"): cv.datetime,
+                }
+                
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        #Xóa mã hết hạn
+        self.hass.services.register(
+            DOMAIN,
+            SVC_CLEANUP_PASSCODES,
+            self.handle_cleanup_passcodes,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        #lấy danh sách passcode
+        self.hass.services.register(
+            DOMAIN,
+            SVC_LIST_PASSCODES,
+            self.handle_list_passcodes,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        #lấy danh sách unlock record
+        self.hass.services.register(
+            DOMAIN,
+            SVC_LIST_UNLOCK_RECORDS,
+            self.handle_list_unlock_records,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                    vol.Required("page_no"): cv.string,
+                    vol.Required("page_size"): cv.string,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        #delete passcode
+        self.hass.services.register(
+            DOMAIN,
+            SVC_DELETE_PASSCODE,
+            self.handle_delete_passcode,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                    vol.Required("keyboardPwdId"): cv.string,
+                }
+            ),
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+
+        #change passcode
+        self.hass.services.register(
             DOMAIN,
             SVC_CHANGE_PASSCODE,
             self.handle_change_passcode,
