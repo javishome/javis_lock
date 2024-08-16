@@ -237,9 +237,9 @@ class WebhookHandler:
                         )
                         success = True
             else:
-                _LOGGER.debug("handle_webhook, empty payload: %s", await request.text())
+                _LOGGER.info("handle_webhook, empty payload: %s", await request.text())
         except ValueError as ex:
-            _LOGGER.exception("Exception parsing webhook data: %s", ex)
+            _LOGGER.info("Exception parsing webhook data: %s", ex)
             return
 
         if success and CONF_WEBHOOK_STATUS not in self.entry.data:

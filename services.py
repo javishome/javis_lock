@@ -29,7 +29,8 @@ from .const import (
     SVC_LIST_PASSCODES,
     SVC_LIST_UNLOCK_RECORDS,
     SVC_DELETE_PASSCODE,
-    SVC_CHANGE_PASSCODE
+    SVC_CHANGE_PASSCODE,
+    SVC_UPDATE_LOCK
 )
 from .coordinator import LockUpdateCoordinator, coordinator_for
 from .models import AddPasscodeConfig, OnOff, PassageModeConfig
@@ -135,6 +136,20 @@ class Services:
             ),
             supports_response=SupportsResponse.OPTIONAL,
         )
+
+        #update lock state
+        self.hass.services.async_register(
+            DOMAIN,
+            SVC_UPDATE_LOCK,
+            self.update_lock_state,
+            vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                }
+                
+            ),
+            supports_response=SupportsResponse.NONE,
+        )
     
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
@@ -228,6 +243,20 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
+        #update lock state
+        self.hass.services.register(
+            DOMAIN,
+            SVC_UPDATE_LOCK,
+            self.update_lock_state,
+            vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                }
+                
+            ),
+            supports_response=SupportsResponse.NONE,
+        )
+
 
     def _get_coordinator(self, call: ServiceCall) -> LockUpdateCoordinator:
         _LOGGER.info(f"Call data: {call.data}")
@@ -238,6 +267,11 @@ class Services:
             entity_id = entity_ids[0]
             coordinator = coordinator_for(self.hass, entity_id)
         return coordinator
+    
+
+    async def update_lock_state(self, call: ServiceCall):
+        coordinator = self._get_coordinator(call)
+        await coordinator.async_request_refresh()
 
     # async def handle_configure_passage_mode(self, call: ServiceCall):
     #     """Enable passage mode for the given entities."""
