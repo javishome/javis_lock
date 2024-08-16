@@ -25,7 +25,7 @@ AUTH_SCHEMA = vol.Schema(
 
 async def login(username: str, password: str, url_cloud: str):
     url_login = SERVER_URL + url_cloud + "/api/login"
-    # url_login = SERVER_URL
+    # url_login = SERVER_URL + "/api/login"
     data = {
         "username": username,
         "password": password

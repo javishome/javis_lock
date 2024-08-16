@@ -121,6 +121,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
 
     async def _async_update_data(self) -> LockState:
         try:
+            _LOGGER.info("Updating lock %s ---------------------------------------------------------------", self.lock_id)
             details = await self.api.get_lock(self.lock_id)
 
             new_data = deepcopy(self.data) or LockState(
@@ -136,12 +137,13 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             new_data.hardware_version = details.hardwareRevision
             new_data.firmware_version = details.firmwareRevision
 
-            if new_data.locked is None:
-                try:
-                    state = await self.api.get_lock_state(self.lock_id)
-                    new_data.locked = state.locked == State.locked
-                except Exception:
-                    pass
+            # if new_data.locked is None:
+            try:
+                state = await self.api.get_lock_state(self.lock_id)
+                _LOGGER.info("Lock %s state: %s", self.lock_id, state)
+                new_data.locked = state.locked == State.locked
+            except Exception as err:
+                _LOGGER.info("Failed to get lock state: %s", err)
 
             new_data.auto_lock_seconds = details.autoLockTime
             new_data.passage_mode_config = await self.api.get_lock_passage_mode_config(
@@ -150,6 +152,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
 
             return new_data
         except Exception as err:
+            _LOGGER.info("Failed to update lock %s: %s", self.lock_id, err)
             raise UpdateFailed(err) from err
 
     @callback
@@ -158,7 +161,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         if event.id != self.lock_id:
             return
 
-        _LOGGER.debug("Lock %s received %s", self.unique_id, event)
+        _LOGGER.info("Lock %s received %s", self.unique_id, event)
 
         if not event.success:
             return

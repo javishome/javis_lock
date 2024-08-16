@@ -24,6 +24,7 @@ SVC_LIST_PASSCODES = "list_passcodes"
 SVC_LIST_UNLOCK_RECORDS = "list_unlock_records"
 SVC_DELETE_PASSCODE = "delete_passcode"
 SVC_CHANGE_PASSCODE = "change_passcode"
+SVC_UPDATE_LOCK = "update_lock"
 
 HOST1 = "javisco.com"
 HOST2 = "javishome.io"
