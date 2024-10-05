@@ -202,8 +202,6 @@ class WebhookHandler:
         if CONF_WEBHOOK_STATUS not in self.entry.data:
             self.async_show_setup_message(webhook_url)
 
-        _LOGGER.info("Webhook registered at %s", webhook_url)
-
         # Ensure the webhook is not registered already
         webhook_unregister(self.hass, self.entry.data[CONF_WEBHOOK_ID])
 

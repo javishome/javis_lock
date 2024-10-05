@@ -18,7 +18,7 @@ from homeassistant.util import dt
 from .api import TTLockApi
 from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
 from .models import Features, PassageModeConfig, State, WebhookEvent
-
+from datetime import datetime
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -173,15 +173,34 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         new_data.battery_level = event.battery_level
 
         if state := event.state:
-            if state.locked == State.locked:
-                new_data.locked = True
-            elif state.locked == State.unlocked:
-                new_data.locked = False
-                self._handle_auto_lock(event.lock_ts, event.server_ts)
+            auto_lock_delay = self.data.auto_lock_delay(event.lock_ts)
+            if auto_lock_delay is None:
+                # Giả định trạng thái trái ngược với trạng thái mong muốn
+                if state.locked == State.locked:
+                    new_data.locked = False
+                elif state.locked == State.unlocked:
+                    new_data.locked = True
 
-            if state.locked is not None:
-                new_data.last_user = event.user
-                new_data.last_reason = event.event.description
+                if state.locked is not None:
+                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_reason = event.event.description
+
+                new_data.action_pending = True
+                self.async_set_updated_data(new_data)
+                new_data.action_pending = False
+                new_data.locked =  not new_data.locked
+                
+            else:
+                if state.locked == State.locked:
+                    new_data.locked = True
+                elif state.locked == State.unlocked:
+                    new_data.locked = False
+                    self._handle_auto_lock(event.lock_ts, event.server_ts)
+
+
+                if state.locked is not None:
+                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_reason = event.event.description
 
         self.async_set_updated_data(new_data)
 
@@ -207,6 +226,8 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             self.async_set_updated_data(new_data)
 
         self.hass.create_task(_auto_locked(auto_lock_delay, computed_msg_delay))
+            
+
 
     @property
     def unique_id(self) -> str:
