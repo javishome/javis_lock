@@ -11,7 +11,10 @@ from urllib.parse import urljoin
 from aiohttp import ClientResponse, ClientSession
 from .const import SERVER_URL
 import traceback
-
+import homeassistant.helpers.config_validation as cv
+import voluptuous as vol
+import aiohttp
+from .const import SERVER_URL, HOST1, HOST2, HOST3
 
 from .models import (
     AddPasscodeConfig,
@@ -22,8 +25,41 @@ from .models import (
     Passcode,
 )
 
-_LOGGER = logging.getLogger(__name__)
 GW_LOCK = asyncio.Lock()
+
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_URL
+import traceback
+
+
+_LOGGER = logging.getLogger(__name__)
+AUTH_SCHEMA = vol.Schema(
+    {vol.Required(CONF_USERNAME): cv.string, 
+     vol.Required(CONF_PASSWORD): cv.string,
+     vol.Required(CONF_URL, default=HOST3): vol.In(
+                    [HOST1, HOST2, HOST3]
+                )}
+)
+
+
+
+async def login(username: str, password: str, url_cloud: str):
+    url_login = SERVER_URL + url_cloud + "/api/login"
+    # url_login = SERVER_URL + "/api/login"
+    data = {
+        "username": username,
+        "password": password
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url_login, json=data) as response:
+                is_error = (await response.json()).get("errcode")
+                if is_error is None:
+                    return {"error": '', "is_success": True}
+                else:
+                    return {"error": "Invalid username or password", "is_success": False}
+    except Exception as e:
+        _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
+        return {"error": "Server disconected", "is_success": False}
 
 
 class RequestFailed(Exception):
