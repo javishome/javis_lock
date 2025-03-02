@@ -8,14 +8,13 @@ from secrets import token_hex
 import time
 from typing import Any, cast
 from urllib.parse import urljoin
-from aiohttp import ClientResponse, ClientSession
+from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from .const import SERVER_URL
 import traceback
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import aiohttp
 from .const import SERVER_URL, HOST1, HOST2, HOST3
-
 from .models import (
     AddPasscodeConfig,
     Features,
@@ -131,33 +130,61 @@ class TTLockApi:
     async def get(self, path: str, **kwargs: Any) -> Mapping[str, Any]:
         await self.ensure_valid_token()
         kwargs["access_token"] = self.token
-        """Make GET request to the API with kwargs as query params."""
         log_id = token_hex(2)
-
+    
         url = urljoin(self.base_url, path)
         _LOGGER.debug("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
-        resp = await self._web_session.get(
-            url,
-            params = kwargs,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-        return await self._parse_resp(resp, log_id)
+    
+        max_retries = 3  # Số lần thử lại tối đa
+        retry_delay = 2  # Thời gian chờ giữa các lần thử lại (giây)
+    
+        for attempt in range(max_retries):
+            try:
+                resp = await self._web_session.get(
+                    url,
+                    params=kwargs,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    timeout=ClientTimeout(total=60),
+                )
+                return await self._parse_resp(resp, log_id)
+    
+            except asyncio.CancelledError:
+                _LOGGER.error("[%s] Request was cancelled!", log_id)
+            except Exception as e:
+                _LOGGER.error("[%s] Exception occurred: %s", log_id, str(e))
+    
+            if attempt < max_retries:
+                await asyncio.sleep(retry_delay)  # Chờ trước khi thử lại
+
+        return None
 
     async def post(self, path: str, **kwargs: Any) -> Mapping[str, Any]:
         await self.ensure_valid_token()
         kwargs["access_token"] = self.token
         """Make GET request to the API with kwargs as query params."""
         log_id = token_hex(2)
-
         url = urljoin(self.base_url, path)
         _LOGGER.info("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
-        resp = await self._web_session.post(
-            url,
-            json=kwargs
-        )
-        return await self._parse_resp(resp, log_id)
-    
+        max_retries = 3  # Số lần thử lại tối đa
+        retry_delay = 2  # Thời gian chờ giữa các lần thử lại (giây)
 
+        for attempt in range(max_retries):
+            try:
+                resp = await self._web_session.post(
+                            url,
+                            json=kwargs
+                        )
+                return await self._parse_resp(resp, log_id)
+    
+            except asyncio.CancelledError:
+                _LOGGER.error("[%s] Request was cancelled!", log_id)
+            except Exception as e:
+                _LOGGER.error("[%s] Exception occurred: %s", log_id, str(e))
+    
+            if attempt < max_retries:
+                await asyncio.sleep(retry_delay)  # Chờ trước khi thử lại
+
+        return None
 
     async def get_locks(self) -> list[int]:
         """Enumerate all locks in the account."""
