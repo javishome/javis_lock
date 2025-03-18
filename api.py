@@ -11,9 +11,12 @@ from urllib.parse import urljoin
 from aiohttp import ClientResponse, ClientSession, ClientTimeout
 from .const import SERVER_URL
 import traceback
+from aiohttp_retry import RetryClient, ExponentialRetry
+
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import aiohttp
+
 from .const import SERVER_URL, HOST1, HOST2, HOST3
 from .models import (
     AddPasscodeConfig,
@@ -131,32 +134,32 @@ class TTLockApi:
         await self.ensure_valid_token()
         kwargs["access_token"] = self.token
         log_id = token_hex(2)
-    
+
         url = urljoin(self.base_url, path)
         _LOGGER.debug("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
-    
-        max_retries = 3  # Số lần thử lại tối đa
-        retry_delay = 2  # Thời gian chờ giữa các lần thử lại (giây)
-    
-        for attempt in range(max_retries):
-            try:
-                resp = await self._web_session.get(
-                    url,
-                    params=kwargs,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                    timeout=ClientTimeout(total=60),
-                )
+        statuses_to_retry = {400}
+        retry_exceptions = {asyncio.exceptions.CancelledError}
+        retry_options = ExponentialRetry(
+                attempts=3,
+                start_timeout=2,
+                statuses=statuses_to_retry,
+                exceptions=retry_exceptions
+        )
+        retry_client = RetryClient(self._web_session, retry_options=retry_options, raise_for_status=False)
+        
+        try:
+            async with retry_client.get(
+                url,
+                params=kwargs,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=ClientTimeout(total=180),
+            ) as resp:
                 return await self._parse_resp(resp, log_id)
-    
-            except asyncio.CancelledError:
-                _LOGGER.error("[%s] Request was cancelled!", log_id)
-            except Exception as e:
-                _LOGGER.error("[%s] Exception occurred: %s", log_id, str(e))
-    
-            if attempt < max_retries:
-                await asyncio.sleep(retry_delay)  # Chờ trước khi thử lại
-
-        return None
+        except Exception as e:
+            _LOGGER.error("[%s] Exception occurred after retries: %s", log_id, str(e))
+            return None
+        finally:
+            await retry_client.close()
 
     async def post(self, path: str, **kwargs: Any) -> Mapping[str, Any]:
         await self.ensure_valid_token()

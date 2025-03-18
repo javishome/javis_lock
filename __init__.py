@@ -95,11 +95,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             LockUpdateCoordinator(hass, client, lock_id)
             for lock_id in await client.get_locks()
         ]
-        await asyncio.gather(
-            *[coordinator.async_config_entry_first_refresh() for coordinator in locks]
-        )
+        for coordinator in locks:
+            try:
+                await coordinator.async_config_entry_first_refresh()
+            except Exception as e:
+                _LOGGER.error(f"Lỗi khi cập nhật khóa {coordinator.lock_id}: {e}")
         hass.data[DOMAIN][entry.entry_id][TT_LOCKS] = locks
-
         
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
