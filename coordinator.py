@@ -137,13 +137,22 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             new_data.hardware_version = details.hardwareRevision
             new_data.firmware_version = details.firmwareRevision
 
-            # if new_data.locked is None:
-            try:
-                state = await self.api.get_lock_state(self.lock_id)
-                _LOGGER.info("Lock %s state: %s", self.lock_id, state)
-                new_data.locked = state.locked == State.locked
-            except Exception as err:
-                _LOGGER.info("Failed to get lock state: %s", err)
+            is_get_lock_state = False
+            for i in range(3):
+                _LOGGER.info("Try to get lock %s lock state %s",self.lock_id, i)
+                try:
+                    state = await self.api.get_lock_state(self.lock_id)
+                    _LOGGER.info("Lock %s state: %s", self.lock_id, state)
+                    new_data.locked = state.locked == State.locked
+                    is_get_lock_state = True
+                    break
+                except Exception as err:
+                    state = State.locked
+                    _LOGGER.info("Failed to get lock %s lock state: %s",self.lock_id,  err)
+            if not is_get_lock_state:
+                _LOGGER.info("default %s lock state: %s", self.lock_id,  state)
+                new_data.locked = State.locked
+
 
             new_data.auto_lock_seconds = details.autoLockTime
             new_data.passage_mode_config = await self.api.get_lock_passage_mode_config(
