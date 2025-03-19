@@ -18,7 +18,7 @@ from homeassistant.util import dt
 from .api import TTLockApi
 from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
 from .models import Features, PassageModeConfig, State, WebhookEvent
-
+from datetime import datetime
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -121,6 +121,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
 
     async def _async_update_data(self) -> LockState:
         try:
+            _LOGGER.info("Updating lock %s ---------------------------------------------------------------", self.lock_id)
             details = await self.api.get_lock(self.lock_id)
 
             new_data = deepcopy(self.data) or LockState(
@@ -136,12 +137,22 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             new_data.hardware_version = details.hardwareRevision
             new_data.firmware_version = details.firmwareRevision
 
-            if new_data.locked is None:
+            is_get_lock_state = False
+            for i in range(3):
+                _LOGGER.info("Try to get lock %s lock state %s",self.lock_id, i)
                 try:
                     state = await self.api.get_lock_state(self.lock_id)
+                    _LOGGER.info("Lock %s state: %s", self.lock_id, state)
                     new_data.locked = state.locked == State.locked
-                except Exception:
-                    pass
+                    is_get_lock_state = True
+                    break
+                except Exception as err:
+                    state = State.locked
+                    _LOGGER.info("Failed to get lock %s lock state: %s",self.lock_id,  err)
+            if not is_get_lock_state:
+                _LOGGER.info("default %s lock state: %s", self.lock_id,  state)
+                new_data.locked = State.locked
+
 
             new_data.auto_lock_seconds = details.autoLockTime
             new_data.passage_mode_config = await self.api.get_lock_passage_mode_config(
@@ -150,6 +161,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
 
             return new_data
         except Exception as err:
+            _LOGGER.info("Failed to update lock %s: %s", self.lock_id, err)
             raise UpdateFailed(err) from err
 
     @callback
@@ -158,7 +170,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         if event.id != self.lock_id:
             return
 
-        _LOGGER.debug("Lock %s received %s", self.unique_id, event)
+        _LOGGER.info("Lock %s received %s", self.unique_id, event)
 
         if not event.success:
             return
@@ -170,15 +182,34 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         new_data.battery_level = event.battery_level
 
         if state := event.state:
-            if state.locked == State.locked:
-                new_data.locked = True
-            elif state.locked == State.unlocked:
-                new_data.locked = False
-                self._handle_auto_lock(event.lock_ts, event.server_ts)
+            auto_lock_delay = self.data.auto_lock_delay(event.lock_ts)
+            if auto_lock_delay is None:
+                # Giả định trạng thái trái ngược với trạng thái mong muốn
+                if state.locked == State.locked:
+                    new_data.locked = False
+                elif state.locked == State.unlocked:
+                    new_data.locked = True
 
-            if state.locked is not None:
-                new_data.last_user = event.user
-                new_data.last_reason = event.event.description
+                if state.locked is not None:
+                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_reason = event.event.description
+
+                new_data.action_pending = True
+                self.async_set_updated_data(new_data)
+                new_data.action_pending = False
+                new_data.locked =  not new_data.locked
+                
+            else:
+                if state.locked == State.locked:
+                    new_data.locked = True
+                elif state.locked == State.unlocked:
+                    new_data.locked = False
+                    self._handle_auto_lock(event.lock_ts, event.server_ts)
+
+
+                if state.locked is not None:
+                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_reason = event.event.description
 
         self.async_set_updated_data(new_data)
 
@@ -204,6 +235,8 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             self.async_set_updated_data(new_data)
 
         self.hass.create_task(_auto_locked(auto_lock_delay, computed_msg_delay))
+            
+
 
     @property
     def unique_id(self) -> str:
