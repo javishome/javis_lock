@@ -1,0 +1,9 @@
+{
+    "name": "Javis cam AI",
+    "content_in_root": false,
+    "zip_release": true,
+    "homeassistant": "2024.4.4",
+    "filename": "javis_lock.zip",
+    "hide_default_branch": true,
+    "hacs": "1.35.0"
+}
