@@ -1,0 +1,47 @@
+name: Create Release manually
+on:
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      set_release:
+        description: "nhập phiên bản HA cần build"
+        required: true
+        default: "2024_12_4"
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from manifest.json
+        id: get_version
+        run: echo "VERSION=$(jq -r '.version' build/${{ github.event.inputs.set_release }}/manifest.json)" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
+          release_name: "Release v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
+          body: "### Changelog\n\n- Cập nhật v${{ github.event.inputs.set_release }}_${{ env.VERSION }}."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: ZIP Component Dir
+        run: |
+          cd ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}
+          zip -r javis_lock.zip ./
+
+      - name: Upload zip to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ github.workspace }}/build/${{ github.event.inputs.set_release }}/javis_lock.zip
+          asset_name: javis_lock.zip
+          tag: "v${{ github.event.inputs.set_release }}_${{ env.VERSION }}"
+          overwrite: true
