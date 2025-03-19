@@ -26,6 +26,7 @@ from homeassistant.helpers import (
     config_entry_oauth2_flow,
     issue_registry as ir,
 )
+from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.network import NoURLAvailableError
 import uuid
@@ -59,11 +60,20 @@ async def refactor_webhook_url(webhook_url, mac, host):
     new_webhook_url = base_url +  webhook_url.split("/api/webhook")[1]
     return new_webhook_url
 
+def is_new_version():
+    year,version = ha_version.split('.')[:2]
+    if int(year) >= 2024 and int(version) >= 7:
+        return True
+    return False
+
     
 
 def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the TTLock component."""
-    Services(hass).register()
+    if is_new_version():
+        Services(hass).register_new()
+    else:
+        Services(hass).register_old()
 
     return True
 
@@ -85,18 +95,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             LockUpdateCoordinator(hass, client, lock_id)
             for lock_id in await client.get_locks()
         ]
-        await asyncio.gather(
-            *[coordinator.async_config_entry_first_refresh() for coordinator in locks]
-        )
+        for coordinator in locks:
+            try:
+                await coordinator.async_config_entry_first_refresh()
+            except Exception as e:
+                _LOGGER.error(f"Lỗi khi cập nhật khóa {coordinator.lock_id}: {e}")
+        # await asyncio.gather(
+        #     *[coordinator.async_config_entry_first_refresh() for coordinator in locks]
+        # )
         hass.data[DOMAIN][entry.entry_id][TT_LOCKS] = locks
-
         
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         _LOGGER.info("TTLock setup complete")
     except Exception as ex:
         _LOGGER.error(f"async_setup_new: {traceback.format_exc()}\n")
-        return 
+        return False
     return True
 
 
@@ -192,8 +206,6 @@ class WebhookHandler:
         if CONF_WEBHOOK_STATUS not in self.entry.data:
             self.async_show_setup_message(webhook_url)
 
-        _LOGGER.info("Webhook registered at %s", webhook_url)
-
         # Ensure the webhook is not registered already
         webhook_unregister(self.hass, self.entry.data[CONF_WEBHOOK_ID])
 
@@ -227,9 +239,9 @@ class WebhookHandler:
                         )
                         success = True
             else:
-                _LOGGER.debug("handle_webhook, empty payload: %s", await request.text())
+                _LOGGER.info("handle_webhook, empty payload: %s", await request.text())
         except ValueError as ex:
-            _LOGGER.exception("Exception parsing webhook data: %s", ex)
+            _LOGGER.info("Exception parsing webhook data: %s", ex)
             return
 
         if success and CONF_WEBHOOK_STATUS not in self.entry.data:

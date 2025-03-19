@@ -1,46 +1,16 @@
 """Config flow for TTLock."""
 import logging
 from typing import Any, Dict, Optional
+from .const import DOMAIN
+from .api import AUTH_SCHEMA, login
 
 
-import voluptuous as vol
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_URL
-import aiohttp
 from homeassistant import config_entries
-import homeassistant.helpers.config_validation as cv
-
-from .const import DOMAIN, HOST1, HOST2, HOST3,SERVER_URL
-import traceback
 _LOGGER = logging.getLogger(__name__)
-AUTH_SCHEMA = vol.Schema(
-    {vol.Required(CONF_USERNAME): cv.string, 
-     vol.Required(CONF_PASSWORD): cv.string,
-     vol.Required(CONF_URL, default=HOST3): vol.In(
-                    [HOST1, HOST2, HOST3]
-                )}
-)
 
 
-
-async def login(username: str, password: str, url_cloud: str):
-    url_login = SERVER_URL + url_cloud + "/api/login"
-    # url_login = SERVER_URL
-    data = {
-        "username": username,
-        "password": password
-    }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url_login, json=data) as response:
-                is_error = (await response.json()).get("errcode")
-                if is_error is None:
-                    return {"error": '', "is_success": True}
-                else:
-                    return {"error": "Invalid username or password", "is_success": False}
-    except Exception as e:
-        _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
-        return {"error": "Server disconected", "is_success": False}
 
 class GithubCustomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Github Custom config flow."""

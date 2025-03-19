@@ -217,4 +217,13 @@ change_passcode:
       required: False
       selector:
         text:
+
+update_lock:
+  name: Cập nhật thông tin khóa.
+  description: Cập nhật thông tin khóa.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+
     
