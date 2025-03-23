@@ -146,9 +146,12 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
                     new_data.locked = state.locked == State.locked
                     is_get_lock_state = True
                     break
-                except Exception as err:
+                except asyncio.CancelledError as err:
+                    _LOGGER.info("Task cancelled for lock %s: %s", self.lock_id, err)
                     state = State.locked
-                    _LOGGER.info("Failed to get lock %s lock state: %s",self.lock_id,  err)
+                except Exception as err:
+                    _LOGGER.info("Failed to get lock %s lock state: %s", self.lock_id, err)
+                    state = State.locked
             if not is_get_lock_state:
                 _LOGGER.info("default %s lock state: %s", self.lock_id,  state)
                 new_data.locked = State.locked
