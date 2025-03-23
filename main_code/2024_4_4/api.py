@@ -158,6 +158,9 @@ class TTLockApi:
         except Exception as e:
             _LOGGER.error("[%s] Exception occurred after retries: %s", log_id, str(e))
             return None
+        except asyncio.CancelledError as err:
+            _LOGGER.error("[%s] Exception occurred after retries: %s", log_id, str(err))
+            return None
 
     async def post(self, path: str, **kwargs: Any) -> Mapping[str, Any]:
         await self.ensure_valid_token()
