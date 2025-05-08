@@ -114,7 +114,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         self.lock_id = lock_id
 
         super().__init__(
-            hass, _LOGGER, name=DOMAIN, update_interval=timedelta(minutes=15)
+            hass, _LOGGER, name=DOMAIN, update_interval=timedelta(minutes=1440)
         )
 
         async_dispatcher_connect(self.hass, SIGNAL_NEW_DATA, self._process_webhook_data)
@@ -137,25 +137,17 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             new_data.hardware_version = details.hardwareRevision
             new_data.firmware_version = details.firmwareRevision
 
-            is_get_lock_state = False
-            for i in range(3):
-                _LOGGER.info("Try to get lock %s lock state %s",self.lock_id, i)
-                try:
-                    state = await self.api.get_lock_state(self.lock_id)
-                    _LOGGER.info("Lock %s state: %s", self.lock_id, state)
-                    new_data.locked = state.locked == State.locked
-                    is_get_lock_state = True
-                    break
-                except asyncio.CancelledError as err:
-                    _LOGGER.info("Task cancelled for lock %s: %s", self.lock_id, err)
-                    state = State.locked
-                except Exception as err:
-                    _LOGGER.info("Failed to get lock %s lock state: %s", self.lock_id, err)
-                    state = State.locked
-            if not is_get_lock_state:
-                _LOGGER.info("default %s lock state: %s", self.lock_id,  state)
-                new_data.locked = State.locked
-
+            _LOGGER.info("Try to get lock %s lock state",self.lock_id)
+            try:
+                state = await self.api.get_lock_state(self.lock_id)
+                _LOGGER.info("Lock %s state: %s", self.lock_id, state)
+                new_data.locked = state.locked == State.locked
+            except asyncio.CancelledError as err:
+                _LOGGER.info("Task cancelled for lock %s: %s", self.lock_id, err)
+                new_data.locked = False
+            except Exception as err:
+                _LOGGER.info("Failed to get lock %s lock state: %s", self.lock_id, err)
+                new_data.locked = False
 
             new_data.auto_lock_seconds = details.autoLockTime
             new_data.passage_mode_config = await self.api.get_lock_passage_mode_config(
