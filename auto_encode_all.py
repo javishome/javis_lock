@@ -166,7 +166,6 @@ def main():
     main_code_dir = os.path.join(root_dir, "main_code", "2024")
 
     print("🔁 Starting release for ALL versions")
-    update_manifest_version(main_code_dir)
 
     results = {}
     for ha_version in map_python_version:
@@ -178,7 +177,13 @@ def main():
     for ver, status in results.items():
         py = map_python_version[ver]["py_ver"]
         print(f"  {ver} (Python {py}): {status}")
-    print("🎉 Done!")
+
+    if all(v == "✅ OK" for v in results.values()):
+        update_manifest_version(main_code_dir)
+        print("🎉 Done!")
+    else:
+        print("⚠️  Some builds FAILED — version NOT incremented.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
