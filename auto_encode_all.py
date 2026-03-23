@@ -17,19 +17,41 @@ def remove_old_build(build_dir):
         shutil.rmtree(build_dir)
 
 
-def update_manifest_version(main_code_dir):
+def _read_manifest_version(main_code_dir) -> str | None:
     manifest_path = os.path.join(main_code_dir, "manifest.json")
     if not os.path.exists(manifest_path):
-        print(f"❌ manifest.json not found in {main_code_dir}")
         return None
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)["version"]
+
+
+def _write_manifest_version(main_code_dir, version: str):
+    manifest_path = os.path.join(main_code_dir, "manifest.json")
     with open(manifest_path, "r+", encoding="utf-8") as f:
         data = json.load(f)
-        data["version"] = str(int(data["version"]) + 1)
+        data["version"] = version
         f.seek(0)
         json.dump(data, f, indent=4)
         f.truncate()
-    print(f"📝 Updated manifest.json version to {data['version']}")
-    return data["version"]
+
+
+def update_manifest_version(main_code_dir):
+    """Tăng version +1, trả về (old_version, new_version)."""
+    manifest_path = os.path.join(main_code_dir, "manifest.json")
+    if not os.path.exists(manifest_path):
+        print(f"❌ manifest.json not found in {main_code_dir}")
+        return None, None
+    old = _read_manifest_version(main_code_dir)
+    new = str(int(old) + 1)
+    _write_manifest_version(main_code_dir, new)
+    print(f"📝 Updated manifest.json version: {old} → {new}")
+    return old, new
+
+
+def revert_manifest_version(main_code_dir, old_version: str):
+    """Revert về version cũ khi build thất bại."""
+    _write_manifest_version(main_code_dir, old_version)
+    print(f"↩️  Reverted manifest.json version back to {old_version}")
 
 
 def copy_main_code_to_build(build_dir, main_code_dir):
@@ -167,6 +189,12 @@ def main():
 
     print("🔁 Starting release for ALL versions")
 
+    # Tăng version TRƯỚC khi build → build dirs sẽ copy đúng version mới.
+    # Nếu có build thất bại → revert lại version cũ.
+    old_version, new_version = update_manifest_version(main_code_dir)
+    if new_version is None:
+        sys.exit(1)
+
     results = {}
     for ha_version in map_python_version:
         ok = build_version(ha_version, root_dir, main_code_dir)
@@ -179,10 +207,10 @@ def main():
         print(f"  {ver} (Python {py}): {status}")
 
     if all(v == "✅ OK" for v in results.values()):
-        update_manifest_version(main_code_dir)
-        print("🎉 Done!")
+        print(f"🎉 Done! Version {new_version} released.")
     else:
-        print("⚠️  Some builds FAILED — version NOT incremented.")
+        revert_manifest_version(main_code_dir, old_version)
+        print("⚠️  Some builds FAILED — version reverted to", old_version)
         sys.exit(1)
 
 
