@@ -31,5 +31,11 @@
         "description": "Remove existing repos or add a new repo."
       }
     }
+  },
+  "issues": {
+    "component_outdated": {
+      "title": "Javis Lock — Cần cập nhật",
+      "description": "Server đã từ chối kết nối vì phiên bản Javis Lock đang dùng quá cũ. Vui lòng cập nhật integration lên phiên bản mới nhất qua HACS hoặc tải thủ công từ repository."
+    }
   }
 }
