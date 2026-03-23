@@ -63,12 +63,19 @@ def check_or_install_python(py_ver: str) -> bool:
 
     print(f"⚠️  python{py_ver} not found. Attempting auto-install via deadsnakes PPA...")
     s = _sudo()
+
+    # `distutils` was removed from Python 3.12+ stdlib — the package no longer exists.
+    major, minor = (int(x) for x in py_ver.split(".")[:2])
+    py_pkgs = f"python{py_ver}"
+    if (major, minor) < (3, 12):
+        py_pkgs += f" python{py_ver}-distutils"
+
     cmds = [
         f"{s}apt-get update -qq",
         f"{s}apt-get install -y software-properties-common",
         f"{s}add-apt-repository -y ppa:deadsnakes/ppa",
         f"{s}apt-get update -qq",
-        f"{s}apt-get install -y python{py_ver} python{py_ver}-distutils",
+        f"{s}apt-get install -y {py_pkgs}",
     ]
     for cmd in cmds:
         print(f"  ▶ {cmd}")
