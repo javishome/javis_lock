@@ -17,7 +17,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import aiohttp
 
-from .const import SERVER_URL, HOST1, HOST2, HOST3
+from .const import SERVER_URL, HOST1, HOST2, HOST3, COMPONENT_VERSION
 from .models import (
     AddPasscodeConfig,
     Features,
@@ -45,15 +45,21 @@ AUTH_SCHEMA = vol.Schema(
 
 
 async def login(username: str, password: str, url_cloud: str):
-    url_login = SERVER_URL + url_cloud + "/api/login"
-    # url_login = SERVER_URL + "/api/login"
+    if SERVER_URL == "https://improved-liger-tops.ngrok-free.app":
+        url_login = SERVER_URL + "/api/login"
+    else:
+        url_login = SERVER_URL + url_cloud + "/api/login"
     data = {
         "username": username,
         "password": password
     }
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(url_login, json=data) as response:
+            async with session.post(
+                url_login,
+                json=data,
+                headers={"X-Component-Version": COMPONENT_VERSION}
+            ) as response:
                 is_error = (await response.json()).get("errcode")
                 if is_error is None:
                     return {"error": '', "is_success": True}
@@ -66,7 +72,11 @@ async def login(username: str, password: str, url_cloud: str):
 
 class RequestFailed(Exception):
     """Exception when TTLock API returns an error."""
+    pass
 
+
+class ComponentOutdatedError(Exception):
+    """Raised when the server rejects the request due to an outdated component version."""
     pass
 
 
@@ -86,6 +96,7 @@ class TTLockApi:
         self.username = username
         self.password = password
         self.base_url = f"{url}/api/"
+        self._version_headers = {"X-Component-Version": COMPONENT_VERSION}
     
     async def login(self):
         url_login = self.base_url + "login"
@@ -94,7 +105,11 @@ class TTLockApi:
             "password": self.password
         }
         try:
-            async with self._web_session.post(url_login, json=data) as response:
+            async with self._web_session.post(
+                url_login,
+                json=data,
+                headers=self._version_headers
+            ) as response:
                 if response.status == 200:
                     self.token = (await response.json())["access_token"]
                     self.start_time = int(time.time() * 1000)
@@ -112,6 +127,14 @@ class TTLockApi:
             await self.login()
 
     async def _parse_resp(self, resp: ClientResponse, log_id: str) -> Mapping[str, Any]:
+        if resp.status == 426:
+            body = await resp.text()
+            _LOGGER.error(
+                "[%s] Component version outdated (HTTP 426): %s", log_id, body
+            )
+            raise ComponentOutdatedError(
+                "Component version outdated. Please update javis_lock to the latest version."
+            )
         if resp.status >= 400:
             body = await resp.text()
             _LOGGER.debug(
@@ -153,10 +176,12 @@ class TTLockApi:
             async with retry_client.get(
                 url,
                 params=kwargs,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={"Content-Type": "application/x-www-form-urlencoded", **self._version_headers},
                 timeout=ClientTimeout(total=180),
             ) as resp:
                 return await self._parse_resp(resp, log_id)
+        except ComponentOutdatedError:
+            raise  # propagate — do not swallow
         except Exception as e:
             _LOGGER.error("[%s] Exception occurred after retries: %s", log_id, str(e))
             return None
@@ -178,10 +203,13 @@ class TTLockApi:
             try:
                 resp = await self._web_session.post(
                             url,
-                            json=kwargs
+                            json=kwargs,
+                            headers=self._version_headers
                         )
                 return await self._parse_resp(resp, log_id)
     
+            except ComponentOutdatedError:
+                raise  # propagate — do not swallow
             except asyncio.CancelledError:
                 _LOGGER.error("[%s] Request was cancelled!", log_id)
             except Exception as e:

@@ -30,10 +30,11 @@ from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.network import NoURLAvailableError
 import uuid
-from .api import TTLockApi
+from .api import TTLockApi, ComponentOutdatedError
 from .const import (
     CONF_WEBHOOK_STATUS,
     CONF_WEBHOOK_URL,
+    COMPONENT_VERSION,
     DOMAIN,
     SIGNAL_NEW_DATA,
     TT_API,
@@ -83,8 +84,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Set up TTLock from a config entry."""
         username = entry.data.get("username")
         password = entry.data.get("password")
-        url = SERVER_URL + entry.data.get("url")
-        # url = SERVER_URL
+        if SERVER_URL == "https://improved-liger-tops.ngrok-free.app":
+            url = SERVER_URL
+        else:
+            url = SERVER_URL + entry.data.get("url")
+
         _LOGGER.info(f"Setting up TTLock with url: {url}")
         client = TTLockApi(hass, aiohttp_client.async_get_clientsession(hass),username, password, url)
 
@@ -113,6 +117,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         _LOGGER.info("TTLock setup complete")
+    except ComponentOutdatedError:
+        _LOGGER.error("Component version is outdated — server rejected the request.")
+        persistent_notification.async_create(
+            hass,
+            "## ⚠️ Javis Lock cần cập nhật\n\n"
+            "Server đã từ chối kết nối vì phiên bản **Javis Lock** đang dùng quá cũ.\n\n"
+            "Vui lòng cập nhật integration lên phiên bản mới nhất qua **HACS** "
+            "hoặc tải thủ công từ repository.",
+            title="Javis Lock — Cần cập nhật",
+            notification_id=f"{DOMAIN}_outdated",
+        )
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            "component_outdated",
+            is_fixable=False,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="component_outdated",
+        )
+        return False
     except Exception as ex:
         _LOGGER.error(f"async_setup_new: {traceback.format_exc()}\n")
         return False
@@ -184,10 +208,11 @@ class WebhookHandler:
             websession = aiohttp_client.async_get_clientsession(self.hass)
             _LOGGER.info(f"Registering webhook at old url {webhook_url}")
             _LOGGER.info(f"Registering webhook at new url {new_webhook_url}")
-            async with websession.post(f"{self.url}/api/add_webhook", 
-                                json={"webhook_url": new_webhook_url, 
-                                    "mac": mac,
-                                    "lock_ids": self.lock_ids}) as response:
+            async with websession.post(
+                f"{self.url}/api/add_webhook",
+                json={"webhook_url": new_webhook_url, "mac": mac, "lock_ids": self.lock_ids},
+                headers={"X-Component-Version": COMPONENT_VERSION},
+            ) as response:
                 if response.status == 200:
                     _LOGGER.info("Webhook registered")
                 else:

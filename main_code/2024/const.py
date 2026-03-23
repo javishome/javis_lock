@@ -1,4 +1,11 @@
 """Constants for the TTLock integration."""
+import json
+import pathlib
+
+_manifest = json.loads(
+    (pathlib.Path(__file__).parent / "manifest.json").read_text(encoding="utf-8")
+)
+COMPONENT_VERSION = str(_manifest.get("version", "0"))
 
 DOMAIN = "javis_lock"
 TT_API = "api"
@@ -29,5 +36,5 @@ HOST1 = "javisco.com"
 HOST2 = "javishome.io"
 HOST3 = "javiscloud.com"
 
-# SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-SERVER_URL = "https://lock-api."
+SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
+# SERVER_URL = "https://lock-api."

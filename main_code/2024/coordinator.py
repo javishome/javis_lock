@@ -13,10 +13,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.components import persistent_notification
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt
 
 from .api import TTLockApi
 from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
+from .api import ComponentOutdatedError
 from .models import Features, PassageModeConfig, State, WebhookEvent
 from datetime import datetime
 _LOGGER = logging.getLogger(__name__)
@@ -112,6 +115,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         """Initialize the update co-ordinator for a single lock."""
         self.api = api
         self.lock_id = lock_id
+        self._outdated_notified = False  # spam guard: only notify once
 
         super().__init__(
             hass, _LOGGER, name=DOMAIN, update_interval=timedelta(minutes=1440)
@@ -155,6 +159,28 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             )
 
             return new_data
+        except ComponentOutdatedError as err:
+            if not self._outdated_notified:
+                self._outdated_notified = True
+                _LOGGER.error("Lock %s: component outdated, server rejected request.", self.lock_id)
+                persistent_notification.async_create(
+                    self.hass,
+                    "## \u26a0\ufe0f Javis Lock c\u1ea7n c\u1eadp nh\u1eadt\n\n"
+                    "Server \u0111\u00e3 t\u1eeb ch\u1ed1i k\u1ebft n\u1ed1i v\u00ec phi\u00ean b\u1ea3n **Javis Lock** \u0111ang d\u00f9ng qu\u00e1 c\u0169.\n\n"
+                    "Vui l\u00f2ng c\u1eadp nh\u1eadt integration l\u00ean phi\u00ean b\u1ea3n m\u1edbi nh\u1ea5t qua **HACS** "
+                    "ho\u1eb7c t\u1ea3i th\u1ee7 c\u00f4ng t\u1eeb repository.",
+                    title="Javis Lock \u2014 C\u1ea7n c\u1eadp nh\u1eadt",
+                    notification_id=f"{DOMAIN}_outdated",
+                )
+                ir.async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    "component_outdated",
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.ERROR,
+                    translation_key="component_outdated",
+                )
+            raise UpdateFailed(err) from err
         except Exception as err:
             _LOGGER.info("Failed to update lock %s: %s", self.lock_id, err)
             raise UpdateFailed(err) from err
