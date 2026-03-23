@@ -2,6 +2,7 @@ import os
 import shutil
 import json
 import subprocess
+import sys
 
 # Map: HA version → python version (Linux: python3.12, python3.13)
 map_python_version = {
@@ -45,6 +46,11 @@ def is_python_available(py_ver: str) -> bool:
     return result.returncode == 0
 
 
+def _sudo() -> str:
+    """Return empty string when already root (avoids hostname resolution issues with sudo)."""
+    return "" if os.getuid() == 0 else "sudo "
+
+
 def check_or_install_python(py_ver: str) -> bool:
     """
     Nếu python{py_ver} chưa có:
@@ -56,13 +62,13 @@ def check_or_install_python(py_ver: str) -> bool:
         return True
 
     print(f"⚠️  python{py_ver} not found. Attempting auto-install via deadsnakes PPA...")
-
+    s = _sudo()
     cmds = [
-        "sudo apt-get update -qq",
-        "sudo apt-get install -y software-properties-common",
-        "sudo add-apt-repository -y ppa:deadsnakes/ppa",
-        "sudo apt-get update -qq",
-        f"sudo apt-get install -y python{py_ver} python{py_ver}-distutils",
+        f"{s}apt-get update -qq",
+        f"{s}apt-get install -y software-properties-common",
+        f"{s}add-apt-repository -y ppa:deadsnakes/ppa",
+        f"{s}apt-get update -qq",
+        f"{s}apt-get install -y python{py_ver} python{py_ver}-distutils",
     ]
     for cmd in cmds:
         print(f"  ▶ {cmd}")
