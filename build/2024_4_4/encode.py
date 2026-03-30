@@ -1,5 +1,5 @@
 import os
-
+#update test
 files_pyc = ["__init__.py", "const.py", "api.py"]
 
 # Biên dịch file .py thành .pyc và xóa file gốc
