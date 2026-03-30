@@ -3,9 +3,11 @@ name: Create Release 2024_4_4
 on:
   push:
     branches:
-      - main  # Chỉ chạy khi có thay đổi trên nhánh main
+      - main 
     paths:
-      - "build/2024_4_4/manifest.json"  # Chỉ trigger khi manifest.json thay đổi
+      - "build/2024_4_4/**"  
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -20,7 +22,17 @@ jobs:
         id: get_version
         run: echo "VERSION=$(jq -r '.version' build/2024_4_4/manifest.json)" >> $GITHUB_ENV
 
-      - name: Create GitHub Release
+      - name: Delete old release and tag (if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete "v2024_4_4_${{ env.VERSION }}" --cleanup-tag -y || true
+
+      - name: ZIP Component Dir
+        run: |
+          cd ${{ github.workspace }}/build/2024_4_4
+          zip -r javis_lock.zip ./
+
+      - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v2024_4_4_${{ env.VERSION }}"
@@ -28,19 +40,6 @@ jobs:
           body: "### Changelog\n\n- Cập nhật v2024_4_4_${{ env.VERSION }}."
           draft: false
           prerelease: false
+          files: build/2024_4_4/javis_lock.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: ZIP Component Dir
-        run: |
-          cd ${{ github.workspace }}/build/2024_4_4
-          zip -r javis_lock.zip ./
-
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ github.workspace }}/build/2024_4_4/javis_lock.zip
-          asset_name: javis_lock.zip
-          tag: "v2024_4_4_${{ env.VERSION }}"
-          overwrite: true
