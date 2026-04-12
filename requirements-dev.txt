@@ -1,0 +1,11 @@
+# Dev dependencies for local test scripts in ./tests
+
+# Data models in this component are written for pydantic v1 API
+pydantic>=1.10,<2
+
+# Used by main_code/2024/api.py
+aiohttp-retry>=2.8.3
+
+# Optional but recommended when migrating to pytest-style tests
+pytest>=7.0
+pytest-asyncio>=0.21
