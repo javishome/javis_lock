@@ -1,4 +1,5 @@
 """The TTLock integration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -39,7 +40,7 @@ from .const import (
     SIGNAL_NEW_DATA,
     TT_API,
     TT_LOCKS,
-    SERVER_URL
+    SERVER_URL,
 )
 from .coordinator import LockUpdateCoordinator
 from .models import WebhookEvent
@@ -56,18 +57,19 @@ async def get_mac():
     mac_dec = int(mac, 16)
     return mac_dec
 
+
 async def refactor_webhook_url(webhook_url, mac, host):
     base_url = f"https://{mac}.{host}/api/webhook"
-    new_webhook_url = base_url +  webhook_url.split("/api/webhook")[1]
+    new_webhook_url = base_url + webhook_url.split("/api/webhook")[1]
     return new_webhook_url
 
+
 def is_new_version():
-    year,version = ha_version.split('.')[:2]
+    year, version = ha_version.split(".")[:2]
     if int(year) >= 2024 and int(version) >= 7:
         return True
     return False
 
-    
 
 def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the TTLock component."""
@@ -90,7 +92,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             url = SERVER_URL + entry.data.get("url")
 
         _LOGGER.info(f"Setting up TTLock with url: {url}")
-        client = TTLockApi(hass, aiohttp_client.async_get_clientsession(hass),username, password, url)
+        client = TTLockApi(
+            hass, aiohttp_client.async_get_clientsession(hass), username, password, url
+        )
 
         lock_ids = await client.get_locks()
         if not lock_ids:
@@ -99,11 +103,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         webhook_gen = WebhookHandler(hass, entry, client, url, lock_ids)
         await webhook_gen.setup()
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {TT_API: client}
-        
-        locks = [
-            LockUpdateCoordinator(hass, client, lock_id)
-            for lock_id in lock_ids
-        ]
+
+        locks = [LockUpdateCoordinator(hass, client, lock_id) for lock_id in lock_ids]
         for coordinator in locks:
             try:
                 await coordinator.async_config_entry_first_refresh()
@@ -113,7 +114,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         #     *[coordinator.async_config_entry_first_refresh() for coordinator in locks]
         # )
         hass.data[DOMAIN][entry.entry_id][TT_LOCKS] = locks
-        
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         _LOGGER.info("TTLock setup complete")
@@ -151,11 +151,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-
 class WebhookHandler:
     """Responsible for setting up/processing webhook data."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client, url, lock_ids) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, client, url, lock_ids
+    ) -> None:
         """Init the thing."""
         self.hass = hass
         self.entry = entry
@@ -164,7 +165,7 @@ class WebhookHandler:
         self.lock_ids = lock_ids
 
     async def setup(self) -> None:
-        _LOGGER.info("Setting up webhook")
+        _LOGGER.debug("Setting up webhook")
         """Actually register the webhook."""
         if self.hass.state == CoreState.running:
             await self.register_webhook()
@@ -174,7 +175,7 @@ class WebhookHandler:
             )
 
     async def get_url(self) -> str:
-        _LOGGER.info("Getting webhook url")
+        _LOGGER.debug("Getting webhook url")
         """Get the webhook url depending on the setup."""
         if cloud.async_active_subscription(self.hass):
             if CONF_WEBHOOK_URL not in self.entry.data:
@@ -195,28 +196,36 @@ class WebhookHandler:
 
     async def register_webhook(self, event: Event | None = None) -> None:
         """Set up a webhook to receive pushed data."""
-        _LOGGER.info("Registering webhook")
+        _LOGGER.debug("Registering webhook")
         if CONF_WEBHOOK_ID not in self.entry.data:
-            _LOGGER.info("Webhook not found in config entry, creating new one")
+            _LOGGER.debug("Webhook not found in config entry, creating new one")
             data = {**self.entry.data, CONF_WEBHOOK_ID: secrets.token_hex()}
             self.hass.config_entries.async_update_entry(self.entry, data=data)
 
         try:
             webhook_url = await self.get_url()
             mac = await get_mac()
-            new_webhook_url = await refactor_webhook_url(webhook_url, mac, self.entry.data.get("url"))
+            new_webhook_url = await refactor_webhook_url(
+                webhook_url, mac, self.entry.data.get("url")
+            )
             websession = aiohttp_client.async_get_clientsession(self.hass)
-            _LOGGER.info(f"Registering webhook at old url {webhook_url}")
-            _LOGGER.info(f"Registering webhook at new url {new_webhook_url}")
+            _LOGGER.debug("Registering webhook at old url %s", webhook_url)
+            _LOGGER.debug("Registering webhook at new url %s", new_webhook_url)
             async with websession.post(
                 f"{self.url}/api/add_webhook",
-                json={"webhook_url": new_webhook_url, "mac": mac, "lock_ids": self.lock_ids},
+                json={
+                    "webhook_url": new_webhook_url,
+                    "mac": mac,
+                    "lock_ids": self.lock_ids,
+                },
                 headers={"X-Component-Version": COMPONENT_VERSION},
             ) as response:
                 if response.status == 200:
                     _LOGGER.info("Webhook registered")
                 else:
-                    _LOGGER.error(f"Webhook registration error: {str(await response.text())}")
+                    _LOGGER.error(
+                        f"Webhook registration error: {str(await response.text())}"
+                    )
             data = {**self.entry.data, CONF_WEBHOOK_URL: webhook_url}
             self.hass.config_entries.async_update_entry(self.entry, data=data)
         except NoURLAvailableError:
@@ -255,13 +264,16 @@ class WebhookHandler:
         self, hass: HomeAssistant, webhook_id: str, request: Request
     ) -> None:
         """Handle webhook callback."""
-        _LOGGER.info("Handling webhook")
+        _LOGGER.debug("Handling webhook")
 
         success = False
         try:
             # {'lockId': ['7252408'], 'notifyType': ['1'], 'records': ['[{"lockId":7252408,"electricQuantity":93,"serverDate":1680810180029,"recordTypeFromLock":17,"recordType":7,"success":1,"lockMac":"16:72:4C:CC:01:C4","keyboardPwd":"<digits>","lockDate":1680810186000,"username":"Jonas"}]'], 'admin': ['jonas@lemon.nz'], 'lockMac': ['16:72:4C:CC:01:C4']}
             if data := await request.post():
-                _LOGGER.info("Got webhook data: %s", data)
+                _LOGGER.debug(
+                    "Webhook payload received with %s records",
+                    len(data.getall("records", [])),
+                )
                 for raw_records in data.getall("records", []):
                     for record in json.loads(raw_records):
                         async_dispatcher_send(
@@ -269,28 +281,28 @@ class WebhookHandler:
                         )
                         success = True
             else:
-                _LOGGER.info("handle_webhook, empty payload: %s", await request.text())
+                _LOGGER.debug("handle_webhook empty payload")
         except ValueError as ex:
-            _LOGGER.info("Exception parsing webhook data: %s", ex)
+            _LOGGER.warning("Exception parsing webhook data: %s", ex)
             return
 
         if success and CONF_WEBHOOK_STATUS not in self.entry.data:
             self.async_dismiss_setup_message()
 
     async def unregister_webhook(self, event: Event | None = None) -> None:
-        _LOGGER.info("Unregistering webhook")
+        _LOGGER.debug("Unregistering webhook")
         """Remove the webhook (before stop)."""
         webhook_unregister(self.hass, self.entry.data[CONF_WEBHOOK_ID])
 
     def async_show_setup_message(self, uri: str) -> None:
-        _LOGGER.info("Showing setup message")
+        _LOGGER.debug("Showing setup message")
         """Display persistent notification with setup information."""
         persistent_notification.async_create(
             self.hass, f"Webhook url: {uri}", "TTLock Setup", self.entry.entry_id
         )
 
     def async_dismiss_setup_message(self) -> None:
-        _LOGGER.info("Dismissing setup message")
+        _LOGGER.debug("Dismissing setup message")
         """Dismiss persistent notification."""
         data = {**self.entry.data, CONF_WEBHOOK_STATUS: True}
         self.hass.config_entries.async_update_entry(self.entry, data=data)

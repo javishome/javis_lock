@@ -1,4 +1,5 @@
 """Services for javis_lock integration."""
+
 """Services for javis_lock integration."""
 
 from datetime import datetime, time
@@ -30,11 +31,12 @@ from .const import (
     SVC_LIST_UNLOCK_RECORDS,
     SVC_DELETE_PASSCODE,
     SVC_CHANGE_PASSCODE,
-    SVC_UPDATE_LOCK
+    SVC_UPDATE_LOCK,
 )
 from .coordinator import LockUpdateCoordinator, coordinator_for
 from .models import AddPasscodeConfig, OnOff, PassageModeConfig
 import traceback
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -47,7 +49,7 @@ class Services:
 
     def register_old(self) -> None:
         """Register services for javis_lock integration."""
-        #Tạo passcode
+        # Tạo passcode
         self.hass.services.async_register(
             DOMAIN,
             SVC_CREATE_PASSCODE,
@@ -60,12 +62,11 @@ class Services:
                     vol.Optional("start_time"): cv.datetime,
                     vol.Optional("end_time"): cv.datetime,
                 }
-                
             ),
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #Xóa mã hết hạn
+        # Xóa mã hết hạn
         self.hass.services.async_register(
             DOMAIN,
             SVC_CLEANUP_PASSCODES,
@@ -78,7 +79,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #lấy danh sách passcode
+        # lấy danh sách passcode
         self.hass.services.async_register(
             DOMAIN,
             SVC_LIST_PASSCODES,
@@ -91,7 +92,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #lấy danh sách unlock record
+        # lấy danh sách unlock record
         self.hass.services.async_register(
             DOMAIN,
             SVC_LIST_UNLOCK_RECORDS,
@@ -106,7 +107,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #delete passcode
+        # delete passcode
         self.hass.services.async_register(
             DOMAIN,
             SVC_DELETE_PASSCODE,
@@ -120,7 +121,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #change passcode
+        # change passcode
         self.hass.services.async_register(
             DOMAIN,
             SVC_CHANGE_PASSCODE,
@@ -132,12 +133,11 @@ class Services:
                     vol.Optional("keyboardPwdName"): cv.string,
                     vol.Optional("newKeyboardPwd"): cv.string,
                 }
-                
             ),
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #update lock state
+        # update lock state
         self.hass.services.async_register(
             DOMAIN,
             SVC_UPDATE_LOCK,
@@ -146,14 +146,13 @@ class Services:
                 {
                     vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
                 }
-                
             ),
             supports_response=SupportsResponse.NONE,
         )
-    
+
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
-        #Tạo passcode
+        # Tạo passcode
         self.hass.services.register(
             DOMAIN,
             SVC_CREATE_PASSCODE,
@@ -166,12 +165,11 @@ class Services:
                     vol.Optional("start_time"): cv.datetime,
                     vol.Optional("end_time"): cv.datetime,
                 }
-                
             ),
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #Xóa mã hết hạn
+        # Xóa mã hết hạn
         self.hass.services.register(
             DOMAIN,
             SVC_CLEANUP_PASSCODES,
@@ -184,7 +182,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #lấy danh sách passcode
+        # lấy danh sách passcode
         self.hass.services.register(
             DOMAIN,
             SVC_LIST_PASSCODES,
@@ -197,7 +195,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #lấy danh sách unlock record
+        # lấy danh sách unlock record
         self.hass.services.register(
             DOMAIN,
             SVC_LIST_UNLOCK_RECORDS,
@@ -212,7 +210,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #delete passcode
+        # delete passcode
         self.hass.services.register(
             DOMAIN,
             SVC_DELETE_PASSCODE,
@@ -226,7 +224,7 @@ class Services:
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #change passcode
+        # change passcode
         self.hass.services.register(
             DOMAIN,
             SVC_CHANGE_PASSCODE,
@@ -238,12 +236,11 @@ class Services:
                     vol.Optional("keyboardPwdName"): cv.string,
                     vol.Optional("newKeyboardPwd"): cv.string,
                 }
-                
             ),
             supports_response=SupportsResponse.OPTIONAL,
         )
 
-        #update lock state
+        # update lock state
         self.hass.services.register(
             DOMAIN,
             SVC_UPDATE_LOCK,
@@ -252,22 +249,19 @@ class Services:
                 {
                     vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
                 }
-                
             ),
             supports_response=SupportsResponse.NONE,
         )
 
-
     def _get_coordinator(self, call: ServiceCall) -> LockUpdateCoordinator:
-        _LOGGER.info(f"Call data: {call.data}")
+        _LOGGER.debug("Service call keys: %s", list(call.data.keys()))
         entity_ids = call.data.get(ATTR_ENTITY_ID)
-        _LOGGER.info(f"Entity ids: {entity_ids}")
+        _LOGGER.debug("Entity ids: %s", entity_ids)
         coordinator = None
         if entity_ids:
             entity_id = entity_ids[0]
             coordinator = coordinator_for(self.hass, entity_id)
         return coordinator
-    
 
     async def update_lock_state(self, call: ServiceCall):
         coordinator = self._get_coordinator(call)
@@ -296,14 +290,19 @@ class Services:
     async def handle_create_passcode(self, call: ServiceCall):
         """Create a new passcode for the given entities."""
         try:
-            _LOGGER.info(f"Creating passcode for {call.data.get('passcode_name')}")
+            _LOGGER.debug("Creating passcode for %s", call.data.get("passcode_name"))
 
             if int(call.data.get("type")) <= 2:
                 start_time = 0
                 end_time = 0
             elif int(call.data.get("type")) == 3:
-                if call.data.get("start_time") is None or call.data.get("end_time") is None:
-                    return {"error": "Need start time and end time with period passcode."}
+                if (
+                    call.data.get("start_time") is None
+                    or call.data.get("end_time") is None
+                ):
+                    return {
+                        "error": "Need start time and end time with period passcode."
+                    }
                 start_time_val = call.data.get("start_time")
                 start_time_utc = as_utc(start_time_val)
                 start_time_ts = int(start_time_utc.timestamp() / 3600) * 3600
@@ -316,22 +315,34 @@ class Services:
                 if start_time >= end_time:
                     return {"error": "Start time must be less than end time."}
             else:
-                if call.data.get("start_time") is None or call.data.get("end_time") is None:
-                    return {"error": "Need start time and end time with cyclic passcode."}
+                if (
+                    call.data.get("start_time") is None
+                    or call.data.get("end_time") is None
+                ):
+                    return {
+                        "error": "Need start time and end time with cyclic passcode."
+                    }
                 start_time_val = call.data.get("start_time")
-                start_time_val = datetime.now().replace(hour=start_time_val.hour, minute=start_time_val.minute, second=start_time_val.second)
+                start_time_val = datetime.now().replace(
+                    hour=start_time_val.hour,
+                    minute=start_time_val.minute,
+                    second=start_time_val.second,
+                )
                 start_time_utc = as_utc(start_time_val)
                 start_time_ts = int(start_time_utc.timestamp() / 3600) * 3600
                 start_time = start_time_ts * 1000
 
                 end_time_val = call.data.get("end_time")
-                end_time_val = datetime.now().replace(hour=end_time_val.hour, minute=end_time_val.minute, second=end_time_val.second)
+                end_time_val = datetime.now().replace(
+                    hour=end_time_val.hour,
+                    minute=end_time_val.minute,
+                    second=end_time_val.second,
+                )
                 end_time_utc = as_utc(end_time_val)
                 end_time_ts = int(end_time_utc.timestamp() / 3600) * 3600
                 end_time = end_time_ts * 1000
                 if start_time >= end_time:
                     return {"error": "Start time must be less than end time."}
-
 
             config = AddPasscodeConfig(
                 type=call.data.get("type"),
@@ -339,11 +350,11 @@ class Services:
                 startDate=start_time,
                 endDate=end_time,
             )
-            _LOGGER.info(f"Passcode start create for {config.passcode_name}")
+            _LOGGER.debug("Passcode start create for %s", config.passcode_name)
             coordinator = self._get_coordinator(call)
             if not coordinator:
                 return {"error": "No coordinator found for the given entity."}
-            responce =  await coordinator.api.add_passcode(coordinator.lock_id, config)
+            responce = await coordinator.api.add_passcode(coordinator.lock_id, config)
             return responce
         except Exception as e:
             _LOGGER.error(f"Error creating passcode: {traceback.format_exc()}")
@@ -353,13 +364,12 @@ class Services:
         """List passcode"""
         res = {"list": []}
         coordinator = self._get_coordinator(call)
-        _LOGGER.info(f"handle_list_passcodes")
+        _LOGGER.debug("handle_list_passcodes")
         if not coordinator:
             return {"error": "No coordinator found for the given entity."}
         res = await coordinator.api.list_passcodes(coordinator.lock_id, is_parse=False)
-        
-        return res
 
+        return res
 
     async def handle_cleanup_passcodes(self, call: ServiceCall) -> ServiceResponse:
         """Clean up expired passcodes for the given entities."""
@@ -374,32 +384,45 @@ class Services:
                 removed.append(code.name)
         return {"removed": removed}
 
-    
     async def handle_list_unlock_records(self, call: ServiceCall) -> ServiceResponse:
         coordinator = self._get_coordinator(call)
-        _LOGGER.info(f"handle_list_unlock_records")
+        _LOGGER.debug("handle_list_unlock_records")
         if coordinator:
-            return await coordinator.api.list_unlock_records(coordinator.lock_id, int(call.data.get("page_no")), int(call.data.get("page_size")))
+            return await coordinator.api.list_unlock_records(
+                coordinator.lock_id,
+                int(call.data.get("page_no")),
+                int(call.data.get("page_size")),
+            )
         return {"error": "No coordinator found for the given entity."}
-    
-    
+
     async def handle_delete_passcode(self, call: ServiceCall) -> ServiceResponse:
         coordinator = self._get_coordinator(call)
-        _LOGGER.info(f"handle_list_unlock_records")
+        _LOGGER.debug("handle_delete_passcode")
         res = {"error": "Delete passcode fail."}
         if coordinator:
-            res = await coordinator.api.delete_passcode(coordinator.lock_id, int(call.data.get("keyboardPwdId")))
+            res = await coordinator.api.delete_passcode(
+                coordinator.lock_id, int(call.data.get("keyboardPwdId"))
+            )
         return res
-    
+
     async def handle_change_passcode(self, call: ServiceCall) -> ServiceResponse:
         coordinator = self._get_coordinator(call)
-        _LOGGER.info(f"handle_change_passcode")
+        _LOGGER.debug("handle_change_passcode")
         res = {"error": "Change passcode fail."}
-        if call.data.get("newKeyboardPwd") is None and call.data.get("keyboardPwdName") is None:
+        if (
+            call.data.get("newKeyboardPwd") is None
+            and call.data.get("keyboardPwdName") is None
+        ):
             return {"error": "New passcode or passcode name is required."}
         if coordinator:
-            res = await coordinator.api.change_passcode(coordinator.lock_id, 
-                                                               int(call.data.get("keyboardPwdId")), 
-                                                               call.data.get("newKeyboardPwd") if call.data.get("newKeyboardPwd") else "",
-                                                                 call.data.get("keyboardPwdName") if call.data.get("keyboardPwdName") else "")
+            res = await coordinator.api.change_passcode(
+                coordinator.lock_id,
+                int(call.data.get("keyboardPwdId")),
+                call.data.get("newKeyboardPwd")
+                if call.data.get("newKeyboardPwd")
+                else "",
+                call.data.get("keyboardPwdName")
+                if call.data.get("keyboardPwdName")
+                else "",
+            )
         return res

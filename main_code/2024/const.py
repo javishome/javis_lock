@@ -36,5 +36,5 @@ HOST1 = "javisco.com"
 HOST2 = "javishome.io"
 HOST3 = "javiscloud.com"
 
-SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
-# SERVER_URL = "https://lock-api."
+# SERVER_URL = "https://improved-liger-tops.ngrok-free.app"
+SERVER_URL = "https://lock-api."
