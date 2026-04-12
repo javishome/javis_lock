@@ -1,4 +1,5 @@
 """API for TTLock bound to Home Assistant OAuth."""
+
 import asyncio
 from collections.abc import Mapping
 from hashlib import md5
@@ -35,13 +36,12 @@ import traceback
 
 _LOGGER = logging.getLogger(__name__)
 AUTH_SCHEMA = vol.Schema(
-    {vol.Required(CONF_USERNAME): cv.string, 
-     vol.Required(CONF_PASSWORD): cv.string,
-     vol.Required(CONF_URL, default=HOST3): vol.In(
-                    [HOST1, HOST2, HOST3]
-                )}
+    {
+        vol.Required(CONF_USERNAME): cv.string,
+        vol.Required(CONF_PASSWORD): cv.string,
+        vol.Required(CONF_URL, default=HOST3): vol.In([HOST1, HOST2, HOST3]),
+    }
 )
-
 
 
 async def login(username: str, password: str, url_cloud: str):
@@ -49,22 +49,20 @@ async def login(username: str, password: str, url_cloud: str):
         url_login = SERVER_URL + "/api/login"
     else:
         url_login = SERVER_URL + url_cloud + "/api/login"
-    data = {
-        "username": username,
-        "password": password
-    }
+    data = {"username": username, "password": password}
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                url_login,
-                json=data,
-                headers={"X-Component-Version": COMPONENT_VERSION}
+                url_login, json=data, headers={"X-Component-Version": COMPONENT_VERSION}
             ) as response:
                 is_error = (await response.json()).get("errcode")
                 if is_error is None:
-                    return {"error": '', "is_success": True}
+                    return {"error": "", "is_success": True}
                 else:
-                    return {"error": "Invalid username or password", "is_success": False}
+                    return {
+                        "error": "Invalid username or password",
+                        "is_success": False,
+                    }
     except Exception as e:
         _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
         return {"error": "Server disconected", "is_success": False}
@@ -72,23 +70,21 @@ async def login(username: str, password: str, url_cloud: str):
 
 class RequestFailed(Exception):
     """Exception when TTLock API returns an error."""
+
     pass
 
 
 class ComponentOutdatedError(Exception):
     """Raised when the server rejects the request due to an outdated component version."""
+
     pass
 
 
 class TTLockApi:
     """Provide TTLock authentication tied to an OAuth2 based config entry."""
+
     def __init__(
-        self,
-        hass,
-        websession: ClientSession,
-        username,
-        password,
-        url
+        self, hass, websession: ClientSession, username, password, url
     ) -> None:
         """Initialize TTLock auth."""
         self.hass = hass
@@ -97,18 +93,13 @@ class TTLockApi:
         self.password = password
         self.base_url = f"{url}/api/"
         self._version_headers = {"X-Component-Version": COMPONENT_VERSION}
-    
+
     async def login(self):
         url_login = self.base_url + "login"
-        data = {
-            "username": self.username,
-            "password": self.password
-        }
+        data = {"username": self.username, "password": self.password}
         try:
             async with self._web_session.post(
-                url_login,
-                json=data,
-                headers=self._version_headers
+                url_login, json=data, headers=self._version_headers
             ) as response:
                 if response.status == 200:
                     self.token = (await response.json())["access_token"]
@@ -116,10 +107,10 @@ class TTLockApi:
                     self.expires_in = (await response.json())["expires_in"]
                     _LOGGER.info("login success")
                 else:
-                     _LOGGER.error(f"login error: {str(await response.text())}")
+                    _LOGGER.error(f"login error: {str(await response.text())}")
         except Exception as e:
             _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
-    
+
     async def ensure_valid_token(self):
         if not hasattr(self, "token"):
             await self.login()
@@ -165,18 +156,23 @@ class TTLockApi:
         statuses_to_retry = {400}
         retry_exceptions = {asyncio.exceptions.CancelledError}
         retry_options = ExponentialRetry(
-                attempts=3,
-                start_timeout=2,
-                statuses=statuses_to_retry,
-                exceptions=retry_exceptions
+            attempts=3,
+            start_timeout=2,
+            statuses=statuses_to_retry,
+            exceptions=retry_exceptions,
         )
-        retry_client = RetryClient(self._web_session, retry_options=retry_options, raise_for_status=False)
-        
+        retry_client = RetryClient(
+            self._web_session, retry_options=retry_options, raise_for_status=False
+        )
+
         try:
             async with retry_client.get(
                 url,
                 params=kwargs,
-                headers={"Content-Type": "application/x-www-form-urlencoded", **self._version_headers},
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    **self._version_headers,
+                },
                 timeout=ClientTimeout(total=180),
             ) as resp:
                 return await self._parse_resp(resp, log_id)
@@ -195,26 +191,29 @@ class TTLockApi:
         """Make GET request to the API with kwargs as query params."""
         log_id = token_hex(2)
         url = urljoin(self.base_url, path)
-        _LOGGER.info("[%s] Sending request to %s with args=%s", log_id, url, kwargs)
+        _LOGGER.debug(
+            "[%s] Sending request to %s with arg_keys=%s",
+            log_id,
+            url,
+            list(kwargs.keys()),
+        )
         max_retries = 3  # Số lần thử lại tối đa
         retry_delay = 2  # Thời gian chờ giữa các lần thử lại (giây)
 
         for attempt in range(max_retries):
             try:
                 resp = await self._web_session.post(
-                            url,
-                            json=kwargs,
-                            headers=self._version_headers
-                        )
+                    url, json=kwargs, headers=self._version_headers
+                )
                 return await self._parse_resp(resp, log_id)
-    
+
             except ComponentOutdatedError:
                 raise  # propagate — do not swallow
             except asyncio.CancelledError:
                 _LOGGER.error("[%s] Request was cancelled!", log_id)
             except Exception as e:
                 _LOGGER.error("[%s] Exception occurred: %s", log_id, str(e))
-    
+
             if attempt < max_retries:
                 await asyncio.sleep(retry_delay)  # Chờ trước khi thử lại
 
@@ -275,7 +274,7 @@ class TTLockApi:
             msg = f"❌ Failed to lock {lock_id}: {res.get('errmsg', 'Unknown error')}"
             _LOGGER.error(msg)
             return False
-        
+
         if not res:
             msg = f"❌ Failed to lock {lock_id}"
             _LOGGER.error(msg)
@@ -300,16 +299,16 @@ class TTLockApi:
             )
 
         if res and res.get("errcode") != 0:
-    # handle error
+            # handle error
 
             _LOGGER.error("Failed to unlock %s: %s", lock_id, res["errmsg"])
             return False
-        
-        return (await res.json())
+
+        return await res.json()
 
     async def add_passcode(self, lock_id: int, config: AddPasscodeConfig) -> bool:
         """Add new passcode."""
-        _LOGGER.info(f"Passcode start create for {lock_id}")
+        _LOGGER.debug("Passcode start create for %s", lock_id)
         async with GW_LOCK:
             res = await self.post(
                 "keyboardPwd/get",
@@ -321,29 +320,28 @@ class TTLockApi:
             )
 
         if res and res.get("errcode") != 0:
-    # handle error
+            # handle error
 
             _LOGGER.error(
                 "Failed to create passcode for %s: %s", lock_id, res["errmsg"]
             )
             return False
-        _LOGGER.info(f"Passcode created for {lock_id}")
-        _LOGGER.info("res: %s", res)
+        _LOGGER.debug("Passcode created for %s", lock_id)
         return res
 
-    async def list_passcodes(self, lock_id: int, is_parse = True) -> list[Passcode]:
+    async def list_passcodes(self, lock_id: int, is_parse=True) -> list[Passcode]:
         """Get currently configured passcodes from lock."""
 
-        res = await self.get(
-            "lock/listKeyboardPwd", lockId=lock_id
-        )
+        res = await self.get("lock/listKeyboardPwd", lockId=lock_id)
         if is_parse:
             return [Passcode.parse_obj(passcode) for passcode in res["list"]]
         else:
-            _LOGGER.info("res list passcode: %s", res)
+            _LOGGER.debug("res list passcode count=%s", len(res.get("list", [])))
             return res
-        
-    async def list_unlock_records(self, lock_id: int,page_no:int, page_size:int, is_parse = False):
+
+    async def list_unlock_records(
+        self, lock_id: int, page_no: int, page_size: int, is_parse=False
+    ):
         """Get currently configured passcodes from lock."""
 
         res = await self.get(
@@ -352,7 +350,7 @@ class TTLockApi:
         if is_parse:
             return [Passcode.parse_obj(passcode) for passcode in res["list"]]
         else:
-            _LOGGER.info("res list unlock records: %s", res)
+            _LOGGER.debug("res list unlock records count=%s", len(res.get("list", [])))
             return res
 
     async def delete_passcode(self, lock_id: int, passcode_id: int):
@@ -367,8 +365,14 @@ class TTLockApi:
             )
 
         return resDel
-    
-    async def change_passcode(self, lock_id: int, keyboardPwdId: int, newKeyboardPwd: str, keyboardPwdName: str):
+
+    async def change_passcode(
+        self,
+        lock_id: int,
+        keyboardPwdId: int,
+        newKeyboardPwd: str,
+        keyboardPwdName: str,
+    ):
         """Delete a passcode from lock."""
 
         async with GW_LOCK:
@@ -377,8 +381,7 @@ class TTLockApi:
                 lockId=lock_id,
                 keyboardPwdId=keyboardPwdId,
                 keyboardPwdName=keyboardPwdName,
-                newKeyboardPwd=newKeyboardPwd
+                newKeyboardPwd=newKeyboardPwd,
             )
-
 
         return resDel

@@ -1,4 +1,5 @@
 """Provides the TTLock LockUpdateCoordinator."""
+
 from __future__ import annotations
 
 import asyncio
@@ -22,6 +23,7 @@ from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
 from .api import ComponentOutdatedError
 from .models import Features, PassageModeConfig, State, WebhookEvent
 from datetime import datetime
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -125,7 +127,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
 
     async def _async_update_data(self) -> LockState:
         try:
-            _LOGGER.info("Updating lock %s ---------------------------------------------------------------", self.lock_id)
+            _LOGGER.debug("Updating lock %s", self.lock_id)
             details = await self.api.get_lock(self.lock_id)
 
             new_data = deepcopy(self.data) or LockState(
@@ -141,16 +143,18 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             new_data.hardware_version = details.hardwareRevision
             new_data.firmware_version = details.firmwareRevision
 
-            _LOGGER.info("Try to get lock %s lock state",self.lock_id)
+            _LOGGER.debug("Try to get lock %s lock state", self.lock_id)
             try:
                 state = await self.api.get_lock_state(self.lock_id)
-                _LOGGER.info("Lock %s state: %s", self.lock_id, state)
+                _LOGGER.debug("Lock %s state: %s", self.lock_id, state)
                 new_data.locked = state.locked == State.locked
             except asyncio.CancelledError as err:
-                _LOGGER.info("Task cancelled for lock %s: %s", self.lock_id, err)
+                _LOGGER.debug("Task cancelled for lock %s: %s", self.lock_id, err)
                 new_data.locked = False
             except Exception as err:
-                _LOGGER.info("Failed to get lock %s lock state: %s", self.lock_id, err)
+                _LOGGER.warning(
+                    "Failed to get lock %s lock state: %s", self.lock_id, err
+                )
                 new_data.locked = False
 
             new_data.auto_lock_seconds = details.autoLockTime
@@ -162,7 +166,10 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         except ComponentOutdatedError as err:
             if not self._outdated_notified:
                 self._outdated_notified = True
-                _LOGGER.error("Lock %s: component outdated, server rejected request.", self.lock_id)
+                _LOGGER.error(
+                    "Lock %s: component outdated, server rejected request.",
+                    self.lock_id,
+                )
                 persistent_notification.async_create(
                     self.hass,
                     "## \u26a0\ufe0f Javis Lock c\u1ea7n c\u1eadp nh\u1eadt\n\n"
@@ -182,7 +189,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
                 )
             raise UpdateFailed(err) from err
         except Exception as err:
-            _LOGGER.info("Failed to update lock %s: %s", self.lock_id, err)
+            _LOGGER.warning("Failed to update lock %s: %s", self.lock_id, err)
             raise UpdateFailed(err) from err
 
     @callback
@@ -191,7 +198,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         if event.id != self.lock_id:
             return
 
-        _LOGGER.info("Lock %s received %s", self.unique_id, event)
+        _LOGGER.debug("Lock %s received %s", self.unique_id, event)
 
         if not event.success:
             return
@@ -212,14 +219,16 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
                     new_data.locked = True
 
                 if state.locked is not None:
-                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_user = event.user + datetime.now().strftime(
+                        "_%d%H%M%S"
+                    )
                     new_data.last_reason = event.event.description
 
                 new_data.action_pending = True
                 self.async_set_updated_data(new_data)
                 new_data.action_pending = False
-                new_data.locked =  not new_data.locked
-                
+                new_data.locked = not new_data.locked
+
             else:
                 if state.locked == State.locked:
                     new_data.locked = True
@@ -227,9 +236,10 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
                     new_data.locked = False
                     self._handle_auto_lock(event.lock_ts, event.server_ts)
 
-
                 if state.locked is not None:
-                    new_data.last_user =  event.user + datetime.now().strftime("_%d%H%M%S")
+                    new_data.last_user = event.user + datetime.now().strftime(
+                        "_%d%H%M%S"
+                    )
                     new_data.last_reason = event.event.description
 
         self.async_set_updated_data(new_data)
@@ -256,8 +266,6 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             self.async_set_updated_data(new_data)
 
         self.hass.create_task(_auto_locked(auto_lock_delay, computed_msg_delay))
-            
-
 
     @property
     def unique_id(self) -> str:
