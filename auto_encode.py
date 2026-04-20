@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from datetime import date
 import shutil
 import subprocess
 import sys
@@ -26,13 +27,16 @@ def _read_manifest_version(main_code_dir) -> str | None:
         return str(json.load(f).get("version", "")).strip()
 
 
+def _is_valid_version(version: str) -> bool:
+    """Check if version matches `vN` (legacy) or `vYYYYMMDD` (date-based)."""
+    return bool(re.fullmatch(r"v\d+", version.strip()))
+
+
 def _bump_version_tag(version: str) -> str:
-    """Accept only `vN`, always returns `v{N+1}`."""
-    match = re.fullmatch(r"v(\d+)", version.strip())
-    if not match:
+    """Accept `vN` or `vYYYYMMDD`, always returns `v{today}` (e.g. v20260420)."""
+    if not _is_valid_version(version):
         raise ValueError(f"Invalid manifest version format: {version!r}")
-    current = int(match.group(1))
-    return f"v{current + 1}"
+    return f"v{date.today().strftime('%Y%m%d')}"
 
 
 def should_keep_current_version() -> bool:
@@ -61,7 +65,7 @@ def _write_manifest_version(main_code_dir, version: str):
 
 
 def update_manifest_version(main_code_dir):
-    """Bump version +1, return (old_version, new_version)."""
+    """Bump version to today's date, return (old_version, new_version)."""
     manifest_path = os.path.join(main_code_dir, "manifest.json")
     if not os.path.exists(manifest_path):
         print(f"manifest.json not found in {main_code_dir}")
