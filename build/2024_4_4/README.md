@@ -1,11 +1,11 @@
-# Javis Lock Component (main_code/2024)
+# Javis Lock Component
 
 ## Chức năng chính
-
-- Tích hợp Home Assistant với hệ sinh thái TTLock qua cloud API.
-- Điều khiển khóa từ HA: lock/unlock, đồng bộ trạng thái.
-- Quản lý mật mã người dùng: tạo, đổi, xóa, dọn mã hết hạn.
-- Theo dõi lịch sử mở khóa và thông tin user gần nhất.
-- Hỗ trợ passage mode và auto-lock.
-- Cập nhật nhanh trạng thái khóa qua webhook từ backend.
-- Tương thích cơ chế chặn version từ backend theo format `vN`.
+### Ngày 20/4/2026
+- Tích hợp TTLock vào Home Assistant qua SmartLock Cloud API.
+- Quản lý lock entity: khóa/mở khóa và trạng thái khóa.
+- Quản lý passcode: tạo, đổi, xóa, dọn passcode hết hạn.
+- Lấy lịch sử mở khóa và thông tin người thao tác gần nhất.
+- Hỗ trợ passage mode, auto-lock, sensor và binary sensor.
+- Nhận webhook từ backend để cập nhật state theo thời gian thực.
+- Hỗ trợ policy version chuẩn `vN` khi backend yêu cầu version tối thiểu.

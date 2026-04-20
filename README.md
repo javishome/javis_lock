@@ -1,7 +1,7 @@
 # Javis Lock Component
 
 ## Chức năng chính
-
+### Ngày 20/4/2026
 - Tích hợp TTLock vào Home Assistant qua SmartLock Cloud API.
 - Quản lý lock entity: khóa/mở khóa và trạng thái khóa.
 - Quản lý passcode: tạo, đổi, xóa, dọn passcode hết hạn.
