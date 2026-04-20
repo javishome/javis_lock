@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import tempfile
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -66,14 +67,44 @@ print("TEST VERSION BUMP LOGIC (auto_encode.py)")
 print("=" * 60)
 
 
+today_version = f"v{date.today().strftime('%Y%m%d')}"
+
 show_case(
     "V-001",
-    "Bump prefixed version",
+    "Bump prefixed version to today date",
     "v1",
-    "v2",
-    "Normal path for the new format.",
+    today_version,
+    "Legacy vN format is accepted, output is date-based.",
 )
-check("_bump_version_tag('v1')", release_tool._bump_version_tag("v1"), "v2")
+check("_bump_version_tag('v1')", release_tool._bump_version_tag("v1"), today_version)
+
+
+show_case(
+    "V-001b",
+    "Bump date-based version to today date",
+    "v20260101",
+    today_version,
+    "Date format input is also accepted.",
+)
+check(
+    "_bump_version_tag('v20260101')",
+    release_tool._bump_version_tag("v20260101"),
+    today_version,
+)
+
+
+show_case(
+    "V-001c",
+    "_is_valid_version accepts valid formats",
+    "['v1', 'v20260420', 'v999']",
+    "True for each",
+    "Both legacy and date formats are valid.",
+)
+for valid_v in ("v1", "v20260420", "v999"):
+    check_true(
+        f"_is_valid_version('{valid_v}')",
+        release_tool._is_valid_version(valid_v),
+    )
 
 
 show_case(
@@ -123,7 +154,7 @@ show_case(
     "V-005",
     "Update manifest file from v-format",
     '{"version": "v1"}',
-    'old="v1", new="v2", file version="v2"',
+    f'old="v1", new="{today_version}", file version="{today_version}"',
     "Avoid unicode print issues by mocking print in this test.",
 )
 with tempfile.TemporaryDirectory() as tmp:
@@ -138,8 +169,8 @@ with tempfile.TemporaryDirectory() as tmp:
         data = json.load(f)
 
     check("update_manifest_version old", old_version, "v1")
-    check("update_manifest_version new", new_version, "v2")
-    check("manifest file updated to v2", data["version"], "v2")
+    check("update_manifest_version new", new_version, today_version)
+    check(f"manifest file updated to {today_version}", data["version"], today_version)
 
 
 show_case(
