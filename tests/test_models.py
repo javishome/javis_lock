@@ -127,6 +127,25 @@ def main():
     check("webhook event parses lock id", webhook_event.id, 1)
     check("webhook event parses state", webhook_event.state.locked, models.State.unlocked)
 
+    try:
+        reloaded_models = load_module("models", "models.py")
+        reloaded_models.PassageModeConfig.parse_obj(
+            {
+                "passageMode": 1,
+                "startDate": None,
+                "endDate": None,
+                "isAllDay": 2,
+                "weekDays": [1],
+                "autoUnlock": 2,
+            }
+        )
+        check_true("models can be reloaded without duplicate validators", True)
+    except RuntimeError as exc:
+        check_true(
+            "models can be reloaded without duplicate validators",
+            "duplicate validator function" not in str(exc),
+        )
+
     print("\n" + "=" * 64)
     if tests_failed == 0:
         print(f"ALL {tests_run} TESTS PASSED")
