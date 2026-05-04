@@ -79,6 +79,14 @@ def stub_homeassistant_minimal():
     ha_core.Event = object
     sys.modules["homeassistant.core"] = ha_core
 
+    ha_exceptions = types.ModuleType("homeassistant.exceptions")
+
+    class HomeAssistantError(Exception):
+        pass
+
+    ha_exceptions.HomeAssistantError = HomeAssistantError
+    sys.modules["homeassistant.exceptions"] = ha_exceptions
+
     ha_helpers = types.ModuleType("homeassistant.helpers")
     sys.modules["homeassistant.helpers"] = ha_helpers
 

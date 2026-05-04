@@ -43,6 +43,18 @@ def check_true(test_name, condition):
         print(f"  FAIL: {test_name}")
 
 
+async def expect_raises(test_name, exc_type, coro_func):
+    global tests_run, tests_failed
+    tests_run += 1
+    try:
+        await coro_func()
+        tests_failed += 1
+        print(f"  FAIL: {test_name}")
+        print(f"        Expected {exc_type.__name__} but no exception was raised")
+    except exc_type:
+        print(f"  PASS: {test_name}")
+
+
 async def main():
     print("\n" + "=" * 64)
     print("TEST COORDINATOR RUNTIME")
@@ -87,6 +99,51 @@ async def main():
     check("lock() sets locked True", coordinator.data.locked, True)
     await coordinator.unlock()
     check("unlock() sets locked False", coordinator.data.locked, False)
+
+    class FailingApi:
+        async def lock(self, lock_id):
+            return False
+
+        async def unlock(self, lock_id):
+            return False
+
+    failing_coordinator = coord_mod.LockUpdateCoordinator(hass, FailingApi(), 202)
+    failing_coordinator.data = coord_mod.LockState(
+        name="Back Door", mac="CC:DD", locked=False
+    )
+
+    await expect_raises(
+        "lock() raises when API rejects command",
+        coord_mod.HomeAssistantError,
+        failing_coordinator.lock,
+    )
+    check(
+        "failed lock keeps previous state",
+        failing_coordinator.data.locked,
+        False,
+    )
+    check(
+        "failed lock clears pending state",
+        failing_coordinator.data.action_pending,
+        False,
+    )
+
+    failing_coordinator.data.locked = True
+    await expect_raises(
+        "unlock() raises when API rejects command",
+        coord_mod.HomeAssistantError,
+        failing_coordinator.unlock,
+    )
+    check(
+        "failed unlock keeps previous state",
+        failing_coordinator.data.locked,
+        True,
+    )
+    check(
+        "failed unlock clears pending state",
+        failing_coordinator.data.action_pending,
+        False,
+    )
 
     # _process_webhook_data should ignore unrelated event id
     before_locked = coordinator.data.locked
