@@ -1,0 +1,229 @@
+configure_passage_mode:
+  name: Configure passage mode
+  description: Tries to configure passage mode for a lock (or set of locks)
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    enabled:
+      name: Enabled
+      description: Should passage mode be active (if false, no other fields are required)
+      required: true
+      default: true
+      selector:
+        boolean:
+    auto_unlock:
+      name: Auto-unlock
+      description: Should the the lock auto unlock when passage mode starts
+      required: false
+      default: false
+      selector:
+        boolean:
+    all_day:
+      name: All day
+      description: If set, the enabled setting applies 24/7. If not set then start_time, end_time and week_days is required.
+      required: false
+      default: false
+      selector:
+        boolean:
+    start_time:
+      name: Start time
+      description: When passage mode should begin (only hour + minute, seconds are ignored)
+      required: false
+      default: "00:00"
+      selector:
+        time:
+    end_time:
+      name: End time
+      description: When passage mode should end (only hour + minute, seconds are ignored)
+      required: false
+      default: "00:00"
+      selector:
+        time:
+    days:
+      name: Week days
+      description: Which days should the passage mode schedule apply to?
+      required: false
+      default:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+        - sat
+        - sun
+      selector:
+        select:
+          options:
+            - label: Monday
+              value: mon
+            - label: Tuesday
+              value: tue
+            - label: Wednesday
+              value: wed
+            - label: Thursday
+              value: thu
+            - label: Friday
+              value: fri
+            - label: Saturday
+              value: sat
+            - label: Sunday
+              value: sun
+          multiple: true
+          mode: list
+
+create_passcode:
+  name: Create a new pass code
+  description: Tries to create a new (temporary) passcode for a lock.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    passcode_name:
+      name: Pass code name
+      description: The unique name of this pass code (Can be whatever you like)
+      required: true
+      default: My passcode name
+      selector:
+        text:
+    type:
+      name: Type of passcode
+      description: What type of passcode should be created
+      required: true
+      default: "1"
+      selector:
+        select:
+          options:
+            - label: Một lần (Mã này chỉ có hiệu lực một lần trong vòng 6 giờ kể từ Thời gian bắt đầu)
+              value: "1"
+            - label: Vĩnh viễn (Mã này phải được sử dụng ít nhất một lần trong vòng 24 giờ sau Thời gian bắt đầu, nếu không nó sẽ không còn hiệu lực)
+              value: "2"
+            - label: Thời hạn (Mã này phải được sử dụng ít nhất một lần trong vòng 24 giờ sau Thời gian bắt đầu, nếu không nó sẽ không còn hiệu lực)
+              value: "3"
+            - label: Chu kì cuối tuần (Mã này chỉ có hiệu lực vào thứ 7 và chủ nhật)
+              value: "5"
+            - label: Chu kì hàng ngày (Mã này có hiệu lực vào mỗi ngày trong tuần)
+              value: "6"
+            - label: Chu kì ngày làm việc (Mã này chỉ có hiệu lực vào các ngày làm việc từ thứ 2 đến thứ 6)
+              value: "7"
+            - label: Chu kì thứ 2 (Mã này chỉ có hiệu lực vào thứ 2)
+              value: "8"
+            - label: Chu kì thứ 3 (Mã này chỉ có hiệu lực vào thứ 3)
+              value: "9"
+            - label: Chu kì thứ 4 (Mã này chỉ có hiệu lực vào thứ 4)
+              value: "10"
+            - label: Chu kì thứ 5 (Mã này chỉ có hiệu lực vào thứ 5)
+              value: "11"
+            - label: Chu kì thứ 6 (Mã này chỉ có hiệu lực vào thứ 6)
+              value: "12"
+            - label: Chu kì thứ 7 (Mã này chỉ có hiệu lực vào thứ 7)
+              value: "13"
+            - label: Chu kì chủ nhật (Mã này chỉ có hiệu lực vào thứ chủ nhật)
+              value: "14"
+          multiple: False
+    start_time:
+      name: Start date / time
+      description: What date/time pass code will become valid
+      required: False
+      selector:
+        datetime:
+    end_time:
+      name: End date / time
+      description: What date/time pass code will become invalid
+      required: False
+      selector:
+        datetime:
+
+cleanup_passcodes:
+  name: Remove expired passcodes
+  description: Lists all passcodes for the selected lock and deletes ALL expired passcodes (where the end of validity date is older is past).
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+
+list_unlock_records:
+  name: List unlock records
+  description: Lists all unlock records for the selected lock.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    page_no:
+      name: Page number
+      description: Page number
+      required: true
+      default: "1"
+      selector:
+        text:
+    page_size:
+      name: Page size
+      description: Page size
+      required: true
+      default: "20"
+      selector:
+        text:
+
+
+list_passcodes:
+  name: Danh sách mật mã.
+  description: Danh sách mật mã.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+
+delete_passcode:
+  name: Xóa mật mã.
+  description: Xóa mật mã
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    keyboardPwdId:
+      name: Passcode ID
+      description: Passcode ID
+      required: true
+      selector:
+        text:
+
+change_passcode:
+  name: Thay đổi mật mã.
+  description: Thay đổi mật mã
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+  fields:
+    keyboardPwdId:
+      name: Passcode ID
+      description: Passcode ID
+      required: true
+      selector:
+        text:
+    keyboardPwdName:
+      name: Pass code name
+      description: The unique name of this pass code (Can be whatever you like)
+      required: False
+      selector:
+        text:
+    newKeyboardPwd:
+      name: New passcode
+      description: New passcode
+      required: False
+      selector:
+        text:
+
+update_lock:
+  name: Cập nhật thông tin khóa.
+  description: Cập nhật thông tin khóa.
+  target:
+    entity:
+      integration: javis_lock
+      domain: lock
+
+    

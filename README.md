@@ -1,4 +1,11 @@
-1. Cấu hình SERVER_URL trong file const.py
-2. Copy folder này vào folder /usr/share/hassio/homeassistant/custom_components/
-3. Reload ha
-4. Vào ha -> settings -> devices and services -> add integration -> gõ Javis Lock và cài đặt
+# Javis Lock Component
+
+## Chức năng chính
+### Ngày 20/4/2026
+- Tích hợp TTLock vào Home Assistant qua SmartLock Cloud API.
+- Quản lý lock entity: khóa/mở khóa và trạng thái khóa.
+- Quản lý passcode: tạo, đổi, xóa, dọn passcode hết hạn.
+- Lấy lịch sử mở khóa và thông tin người thao tác gần nhất.
+- Hỗ trợ passage mode, auto-lock, sensor và binary sensor.
+- Nhận webhook từ backend để cập nhật state theo thời gian thực.
+- Hỗ trợ policy version chuẩn `vN` khi backend yêu cầu version tối thiểu.
