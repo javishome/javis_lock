@@ -232,10 +232,11 @@ def _install_component_stubs():
 
 
 class FakeConfigEntries:
-    def __init__(self):
+    def __init__(self, entries=None):
         self.updated = []
         self.forwarded = []
         self.unloaded = []
+        self.entries = entries or []
 
     async def async_forward_entry_setups(self, entry, platforms):
         self.forwarded.append((entry.entry_id, tuple(platforms)))
@@ -247,6 +248,9 @@ class FakeConfigEntries:
     def async_update_entry(self, entry, data=None):
         entry.data = data
         self.updated.append((entry.entry_id, data))
+
+    def async_entries(self, domain=None):
+        return self.entries
 
 
 class FakeBus:
@@ -364,6 +368,34 @@ async def _run_async_tests(mod):
         "entry-1" not in hass.data.get("javis_lock", {}),
     )
 
+    # async_unload_entry syncs remaining active webhook URLs
+    unload_entry = SimpleNamespace(
+        entry_id="entry-unload",
+        data={
+            "username": "u",
+            "password": "p",
+            "url": "cloud.test",
+            "webhook_id": "wid-unload",
+            "webhook_url": "https://ha/api/webhook/wid-unload",
+        },
+    )
+    unload_hass = SimpleNamespace(
+        state="running",
+        data={"javis_lock": {"entry-unload": {"api": SimpleNamespace(), "locks": []}}},
+        bus=FakeBus(),
+        config_entries=FakeConfigEntries(entries=[unload_entry]),
+        _session=FakeSession(),
+    )
+    mod.get_mac = lambda: _async_value(123456)
+    await mod.async_unload_entry(unload_hass, unload_entry)
+    check("unload posts webhook sync", len(unload_hass._session.posts), 1)
+    if unload_hass._session.posts:
+        check(
+            "unload sync clears mac webhooks",
+            unload_hass._session.posts[0]["json"],
+            {"mac": 123456, "webhooks": []},
+        )
+
     # setup() branch when HA is not running yet
     waiting_hass = SimpleNamespace(
         state="starting",
@@ -417,6 +449,44 @@ async def _run_async_tests(mod):
         len(issue_registry.created) >= 1,
     )
 
+    # register_webhook syncs the active webhook URLs through sync_webhooks
+    sync_hass = SimpleNamespace(
+        state="running",
+        bus=FakeBus(),
+        config_entries=FakeConfigEntries(),
+        data={},
+        _session=FakeSession(),
+    )
+    sync_entry = SimpleNamespace(
+        entry_id="entry-sync", data={"url": "cloud.test", "webhook_id": "wid-sync"}
+    )
+    sync_handler = mod.WebhookHandler(
+        sync_hass,
+        sync_entry,
+        client=SimpleNamespace(),
+        url="https://api.test",
+        lock_ids=[77, 88],
+    )
+    mod.get_mac = lambda: _async_value(123456)
+    await sync_handler.register_webhook()
+    check("register_webhook posts only sync", len(sync_hass._session.posts), 1)
+    if len(sync_hass._session.posts) >= 1:
+        sync_post = sync_hass._session.posts[0]
+        check("sync endpoint called", sync_post["url"], "https://api.test/api/sync_webhooks")
+        check(
+            "sync payload",
+            sync_post["json"],
+            {
+                "mac": 123456,
+                "webhooks": [
+                    {
+                        "webhook_url": "https://123456.cloud.test/api/webhook/wid-sync",
+                        "lock_ids": [77, 88],
+                    }
+                ],
+            },
+        )
+
     # async_setup_entry returns False when no lock is returned
     class NoLocksApi:
         def __init__(self, hass, session, username, password, url):
@@ -465,7 +535,41 @@ async def _run_async_tests(mod):
     check("async_setup_entry returns False when outdated", outdated_ok, False)
     check_true("outdated path creates persistent notification", len(pn.calls) >= 1)
 
+    original_read_interface_mac = mod._read_interface_mac
+    try:
+        calls = []
+
+        def read_eth0(interface):
+            calls.append(interface)
+            return "00:11:22:33:44:55" if interface == "eth0" else None
+
+        mod._read_interface_mac = read_eth0
+        mac_decimal, source, mac_address = mod._get_mac_details()
+        check("mac prefers eth0", source, "sysfs:eth0")
+        check("mac eth0 decimal", mac_decimal, int("001122334455", 16))
+        check("mac eth0 address", mac_address, "00:11:22:33:44:55")
+        check("mac stops after eth0", calls, ["eth0"])
+
+        calls.clear()
+
+        def read_end0(interface):
+            calls.append(interface)
+            return "66:77:88:99:aa:bb" if interface == "end0" else None
+
+        mod._read_interface_mac = read_end0
+        mac_decimal, source, mac_address = mod._get_mac_details()
+        check("mac falls back to end0", source, "sysfs:end0")
+        check("mac end0 decimal", mac_decimal, int("66778899aabb", 16))
+        check("mac end0 address", mac_address, "66:77:88:99:aa:bb")
+        check("mac checks eth0 then end0", calls, ["eth0", "end0"])
+    finally:
+        mod._read_interface_mac = original_read_interface_mac
+
     mod.TTLockApi = old_api
+
+
+async def _async_value(value):
+    return value
 
 
 def main():

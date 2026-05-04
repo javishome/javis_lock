@@ -11,6 +11,7 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -308,12 +309,14 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         """Try to lock the lock."""
         with lock_action(self):
             res = await self.api.lock(self.lock_id)
-            if res:
-                self.data.locked = True
+            if not res:
+                raise HomeAssistantError(f"Failed to lock {self.data.name}")
+            self.data.locked = True
 
     async def unlock(self) -> None:
         """Try to unlock the lock."""
         with lock_action(self):
             res = await self.api.unlock(self.lock_id)
-            if res:
-                self.data.locked = False
+            if not res:
+                raise HomeAssistantError(f"Failed to unlock {self.data.name}")
+            self.data.locked = False
