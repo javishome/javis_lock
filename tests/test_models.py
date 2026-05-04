@@ -112,6 +112,21 @@ def main():
     features = models.Features.from_feature_value("3")
     check_true("features parsing returns flag", bool(features))
 
+    webhook_event = models.WebhookEvent.parse_obj(
+        {
+            "lockId": 1,
+            "lockMac": "AA",
+            "electricQuantity": 90,
+            "serverDate": 1710000000000,
+            "lockDate": 1710000000000,
+            "recordType": 1,
+            "username": "user1",
+            "success": 1,
+        }
+    )
+    check("webhook event parses lock id", webhook_event.id, 1)
+    check("webhook event parses state", webhook_event.state.locked, models.State.unlocked)
+
     print("\n" + "=" * 64)
     if tests_failed == 0:
         print(f"ALL {tests_run} TESTS PASSED")
