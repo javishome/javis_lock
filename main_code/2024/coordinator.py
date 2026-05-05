@@ -310,6 +310,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         with lock_action(self):
             res = await self.api.lock(self.lock_id)
             if not res:
+                await self._refresh_state_after_failed_action("lock")
                 raise HomeAssistantError(f"Failed to lock {self.data.name}")
             self.data.locked = True
 
@@ -318,5 +319,24 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         with lock_action(self):
             res = await self.api.unlock(self.lock_id)
             if not res:
+                await self._refresh_state_after_failed_action("unlock")
                 raise HomeAssistantError(f"Failed to unlock {self.data.name}")
+            self.data.locked = False
+
+    async def _refresh_state_after_failed_action(self, action: str) -> None:
+        """Fetch the real lock state after a rejected command."""
+        try:
+            state = await self.api.get_lock_state(self.lock_id)
+        except Exception as err:
+            _LOGGER.warning(
+                "Failed to refresh lock %s state after failed %s: %s",
+                self.lock_id,
+                action,
+                err,
+            )
+            return
+
+        if state.locked == State.locked:
+            self.data.locked = True
+        elif state.locked == State.unlocked:
             self.data.locked = False
