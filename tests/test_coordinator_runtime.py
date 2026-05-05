@@ -101,27 +101,38 @@ async def main():
     check("unlock() sets locked False", coordinator.data.locked, False)
 
     class FailingApi:
+        def __init__(self):
+            self.state = coord_mod.State.unlocked
+            self.state_calls = 0
+
         async def lock(self, lock_id):
             return False
 
         async def unlock(self, lock_id):
             return False
 
-    failing_coordinator = coord_mod.LockUpdateCoordinator(hass, FailingApi(), 202)
+        async def get_lock_state(self, lock_id):
+            self.state_calls += 1
+            return SimpleNamespace(locked=self.state)
+
+    failing_api = FailingApi()
+    failing_coordinator = coord_mod.LockUpdateCoordinator(hass, failing_api, 202)
     failing_coordinator.data = coord_mod.LockState(
         name="Back Door", mac="CC:DD", locked=False
     )
 
+    failing_api.state = coord_mod.State.unlocked
     await expect_raises(
         "lock() raises when API rejects command",
         coord_mod.HomeAssistantError,
         failing_coordinator.lock,
     )
     check(
-        "failed lock keeps previous state",
+        "failed lock refreshes actual unlocked state",
         failing_coordinator.data.locked,
         False,
     )
+    check("failed lock fetches state", failing_api.state_calls, 1)
     check(
         "failed lock clears pending state",
         failing_coordinator.data.action_pending,
@@ -129,16 +140,18 @@ async def main():
     )
 
     failing_coordinator.data.locked = True
+    failing_api.state = coord_mod.State.unlocked
     await expect_raises(
         "unlock() raises when API rejects command",
         coord_mod.HomeAssistantError,
         failing_coordinator.unlock,
     )
     check(
-        "failed unlock keeps previous state",
+        "failed unlock refreshes actual unlocked state",
         failing_coordinator.data.locked,
-        True,
+        False,
     )
+    check("failed unlock fetches state", failing_api.state_calls, 2)
     check(
         "failed unlock clears pending state",
         failing_coordinator.data.action_pending,
