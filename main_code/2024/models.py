@@ -18,9 +18,9 @@ class EpochMs(datetime):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, *args, **kwargs):
+    def validate(cls, value, values=None, config=None, field=None):
         """Use homeassistant time helpers to parse epoch."""
-        return dt.as_local(dt.utc_from_timestamp(v / 1000))
+        return dt.as_local(dt.utc_from_timestamp(value / 1000))
 
 
 class OnOff(Enum):
@@ -235,15 +235,15 @@ class Event:
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, *args, **kwargs):
+    def validate(cls, value, values=None, config=None, field=None):
         """Validate for pydantic type."""
-        if not isinstance(v, int):
+        if not isinstance(value, int):
             raise TypeError("int required")
 
-        if v not in cls.EVENTS:
+        if value not in cls.EVENTS:
             raise ValueError("invalid record")
 
-        return cls(v)
+        return cls(value)
 
     def __repr__(self):
         """Representation of the event."""

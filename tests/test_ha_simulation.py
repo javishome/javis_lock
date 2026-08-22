@@ -76,9 +76,9 @@ def load_component_package(src_dir):
 
 
 async def simulate_ha_version(ha_version, label):
-    print(f"\n=======================================================")
+    print("\n=======================================================")
     print(f"  SIMULATING HOME ASSISTANT {ha_version} ({label})")
-    print(f"=======================================================")
+    print("=======================================================")
 
     setup_ha_environment(ha_version)
 
@@ -89,6 +89,22 @@ async def simulate_ha_version(ha_version, label):
     except Exception as e:
         check(f"[{ha_version}] Import custom_components.javis_lock cleanly", False, str(e))
         return
+
+    # 1b. Strict Pydantic v1 signature compliance check
+    try:
+        import inspect
+        from custom_components.javis_lock import models
+        for name in dir(models):
+            obj = getattr(models, name)
+            if isinstance(obj, type) and hasattr(obj, "__get_validators__"):
+                for v_fn in obj.__get_validators__():
+                    sig = inspect.signature(v_fn)
+                    for p in sig.parameters.values():
+                        if p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                            raise ValueError(f"{name}.{v_fn.__name__} has invalid signature {sig}")
+        check(f"[{ha_version}] Pydantic v1 validator signatures strictly compliant (*args/**kwargs forbidden)", True)
+    except Exception as e:
+        check(f"[{ha_version}] Pydantic v1 validator signatures strictly compliant", False, str(e))
 
     # 2. Duplicate reload idempotency check (Catches Pydantic duplicate validator bug)
     try:

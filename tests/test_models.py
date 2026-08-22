@@ -3,6 +3,7 @@
 Run: python tests/test_models.py
 """
 
+import inspect
 import sys
 import types
 import importlib.util
@@ -27,19 +28,52 @@ def check(test_name, actual, expected):
         print(f"        Actual  : {actual!r}")
 
 
-def check_true(test_name, condition):
+def check_true(test_name, condition, extra=""):
     global tests_run, tests_failed
     tests_run += 1
     if condition:
         print(f"  PASS: {test_name}")
     else:
         tests_failed += 1
-        print(f"  FAIL: {test_name}")
+        print(f"  FAIL: {test_name} {extra}")
+
+
+def verify_pydantic_v1_signature_compliance(models_module):
+    """Enforce strict Pydantic v1 validator signature rules across all models.
+
+    Pydantic v1 strictly disallows *args and **kwargs in validators:
+    (value, values, config, field) - values, config, field are optional.
+    """
+    for name in dir(models_module):
+        obj = getattr(models_module, name)
+        if not isinstance(obj, type):
+            continue
+
+        # Check __get_validators__ generator yields
+        if hasattr(obj, "__get_validators__"):
+            validators = list(obj.__get_validators__())
+            for v_fn in validators:
+                sig = inspect.signature(v_fn)
+                for p in sig.parameters.values():
+                    if p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                        return False, f"{name}.{v_fn.__name__} has invalid signature {sig}: *args/**kwargs forbidden in Pydantic v1"
+
+        # Check @validator decorators on BaseModel
+        if hasattr(obj, "__validators__"):
+            for v_list in obj.__validators__.values():
+                for v_item in v_list:
+                    fn = getattr(v_item, "func", v_item)
+                    sig = inspect.signature(fn)
+                    for p in sig.parameters.values():
+                        if p.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                            return False, f"{name} validator has invalid signature {sig}"
+
+    return True, "All signatures strictly Pydantic v1 compliant"
 
 
 def main():
     print("\n" + "=" * 64)
-    print("TEST MODELS")
+    print("TEST MODELS & PYDANTIC COMPATIBILITY")
     print("=" * 64)
 
     clear_modules(PKG)
@@ -63,6 +97,14 @@ def main():
     sys.modules["homeassistant.util.dt"] = ha_dt
 
     models = load_module("models", "models.py")
+
+    # 1. Pydantic v1 signature compliance check
+    is_compliant, msg = verify_pydantic_v1_signature_compliance(models)
+    check_true("Pydantic v1 validator signature compliance (*args/**kwargs forbidden)", is_compliant, msg)
+
+    # 2. Test EpochMs validator
+    epoch_res = models.EpochMs.validate(1710000000000)
+    check_true("EpochMs.validate returns datetime", isinstance(epoch_res, datetime))
 
     passcode_raw = {
         "keyboardPwdId": 1,
