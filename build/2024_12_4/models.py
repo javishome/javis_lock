@@ -94,11 +94,11 @@ class PassageModeConfig(BaseModel):
     week_days: list[int] = Field([], alias="weekDays")  # monday = 1, sunday = 7
     auto_unlock: OnOff = Field(OnOff.unknown, alias="autoUnlock")
 
-    @validator("start_minute", pre=True, always=True)
+    @validator("start_minute", pre=True, always=True, allow_reuse=True)
     def _set_start_minute(cls, start_minute: int | None) -> int:
         return start_minute or 0
 
-    @validator("end_minute", pre=True, always=True)
+    @validator("end_minute", pre=True, always=True, allow_reuse=True)
     def _set_end_minute(cls, end_minute: int | None) -> int:
         return end_minute or 0
 

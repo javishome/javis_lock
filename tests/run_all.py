@@ -20,6 +20,7 @@ TEST_FILES = [
     "test_init_setup.py",
     "test_entities_and_diagnostics.py",
     "test_models.py",
+    "test_ha_simulation.py",
 ]
 
 
