@@ -7,6 +7,7 @@ import asyncio
 import json
 import sys
 import types
+from unittest.mock import AsyncMock
 from types import SimpleNamespace
 
 from _component_test_stubs import (
@@ -292,6 +293,90 @@ async def _run_async_tests(api_mod):
         api_mod.asyncio.sleep = original_sleep
     check("post retries then succeeds", retry_post_result, {"errcode": 0, "ok": True})
     check("post retried exactly once", flaky_session.calls, 2)
+
+
+
+    # Direct high-level API methods tests
+    api_methods = api_mod.TTLockApi(
+        hass=SimpleNamespace(),
+        websession=post_session,
+        username="u",
+        password="p",
+        url="https://server",
+    )
+    api_methods.ensure_valid_token = types.MethodType(lambda self: _noop_async(), api_methods)
+
+    # 1. lock() success, error, none
+    api_methods.get = AsyncMock(return_value={"errcode": 0})
+    res_lock_ok = await api_methods.lock(1001)
+    check("api.lock() success returns True", res_lock_ok, True)
+
+    api_methods.get = AsyncMock(return_value={"errcode": 1, "errmsg": "Fail"})
+    res_lock_err = await api_methods.lock(1001)
+    check("api.lock() errcode!=0 returns False", res_lock_err, False)
+
+    api_methods.get = AsyncMock(return_value=None)
+    res_lock_none = await api_methods.lock(1001)
+    check("api.lock() None response returns False", res_lock_none, False)
+
+    # 2. unlock() success, error, none
+    api_methods.get = AsyncMock(return_value={"errcode": 0})
+    res_unlock_ok = await api_methods.unlock(1001)
+    check("api.unlock() success returns True", res_unlock_ok, True)
+
+    api_methods.get = AsyncMock(return_value={"errcode": 1, "errmsg": "Fail"})
+    res_unlock_err = await api_methods.unlock(1001)
+    check("api.unlock() errcode!=0 returns False", res_unlock_err, False)
+
+    api_methods.get = AsyncMock(return_value=None)
+    res_unlock_none = await api_methods.unlock(1001)
+    check("api.unlock() None response returns False", res_unlock_none, False)
+
+    # 3. set_passage_mode success, error, none
+    fake_pmc = SimpleNamespace(enabled=True, auto_unlock=True, all_day=False, start_minute=480, end_minute=1080, week_days=[1, 2, 3])
+    api_methods.post = AsyncMock(return_value={"errcode": 0})
+    res_pm_ok = await api_methods.set_passage_mode(1001, fake_pmc)
+    check("api.set_passage_mode() success returns True", res_pm_ok, True)
+
+    api_methods.post = AsyncMock(return_value={"errcode": 1, "errmsg": "Error"})
+    res_pm_err = await api_methods.set_passage_mode(1001, fake_pmc)
+    check("api.set_passage_mode() error returns False", res_pm_err, False)
+
+    api_methods.post = AsyncMock(return_value=None)
+    res_pm_none = await api_methods.set_passage_mode(1001, fake_pmc)
+    check("api.set_passage_mode() None returns False", res_pm_none, False)
+
+    # 4. add_passcode success and error
+    fake_code_cfg = SimpleNamespace(passcode_name="p1", type="1", start_minute=0, end_minute=0)
+    api_methods.post = AsyncMock(return_value={"errcode": 0, "keyboardPwdId": 77})
+    res_add_ok = await api_methods.add_passcode(1001, fake_code_cfg)
+    check("api.add_passcode() success returns dict", res_add_ok.get("keyboardPwdId"), 77)
+
+    api_methods.post = AsyncMock(return_value={"errcode": 1, "errmsg": "Fail"})
+    res_add_err = await api_methods.add_passcode(1001, fake_code_cfg)
+    check("api.add_passcode() error returns False", res_add_err, False)
+
+    # 5. list_passcodes parse & raw
+    api_methods.get = AsyncMock(return_value={"list": [{"keyboardPwdId": 1}]})
+    res_list_raw = await api_methods.list_passcodes(1001, is_parse=False)
+    check("api.list_passcodes(raw) returns dict", len(res_list_raw.get("list")), 1)
+    res_list_parse = await api_methods.list_passcodes(1001, is_parse=True)
+    check("api.list_passcodes(parse) returns list", len(res_list_parse), 1)
+
+    # 6. list_unlock_records parse & raw
+    api_methods.get = AsyncMock(return_value={"list": [{"recordId": 99}]})
+    res_records_raw = await api_methods.list_unlock_records(1001, 1, 10, is_parse=False)
+    check("api.list_unlock_records(raw) returns dict", len(res_records_raw.get("list")), 1)
+    res_records_parse = await api_methods.list_unlock_records(1001, 1, 10, is_parse=True)
+    check("api.list_unlock_records(parse) returns list", len(res_records_parse), 1)
+
+    # 7. delete_passcode & change_passcode
+    api_methods.post = AsyncMock(return_value={"errcode": 0})
+    res_del_pwd = await api_methods.delete_passcode(1001, 55)
+    check("api.delete_passcode() calls post", res_del_pwd, {"errcode": 0})
+
+    res_chg_pwd = await api_methods.change_passcode(1001, 55, "123456", "NewName")
+    check("api.change_passcode() calls post", res_chg_pwd, {"errcode": 0})
 
 
 async def _noop_async():

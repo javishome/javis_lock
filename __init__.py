@@ -1,13 +1,11 @@
 """The TTLock integration."""
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import secrets
 
 from aiohttp.web import Request
-import yaml
 from homeassistant.components import cloud, persistent_notification, webhook
 from homeassistant.components.webhook import (
     async_register as webhook_register,
@@ -23,7 +21,6 @@ from homeassistant.const import (
 from homeassistant.core import CoreState, Event, HomeAssistant
 from homeassistant.helpers import (
     aiohttp_client,
-    config_entry_oauth2_flow,
     issue_registry as ir,
 )
 from homeassistant.const import __version__ as ha_version
@@ -66,7 +63,7 @@ def is_new_version():
         return True
     return False
 
-    
+
 
 def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the TTLock component."""
@@ -90,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         webhook_gen = WebhookHandler(hass, entry, client, url)
         await webhook_gen.setup()
         hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {TT_API: client}
-        
+
         locks = [
             LockUpdateCoordinator(hass, client, lock_id)
             for lock_id in await client.get_locks()
@@ -101,13 +98,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except Exception as e:
                 _LOGGER.error(f"Lỗi khi cập nhật khóa {coordinator.lock_id}: {e}")
         hass.data[DOMAIN][entry.entry_id][TT_LOCKS] = locks
-        
+
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
         _LOGGER.info("TTLock setup complete")
-    except Exception as ex:
+    except Exception:
         _LOGGER.error(f"async_setup_new: {traceback.format_exc()}\n")
-        return 
+        return
     return True
 
 
@@ -176,8 +173,8 @@ class WebhookHandler:
             websession = aiohttp_client.async_get_clientsession(self.hass)
             _LOGGER.info(f"Registering webhook at old url {webhook_url}")
             _LOGGER.info(f"Registering webhook at new url {new_webhook_url}")
-            async with websession.post(f"{self.url}/api/add_webhook", 
-                                json={"webhook_url": new_webhook_url, 
+            async with websession.post(f"{self.url}/api/add_webhook",
+                                json={"webhook_url": new_webhook_url,
                                     "mac": mac,
                                     "lock_ids": lock_ids}) as response:
                 if response.status == 200:

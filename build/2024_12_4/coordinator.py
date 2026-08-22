@@ -23,7 +23,6 @@ from .api import TTLockApi
 from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
 from .api import ComponentOutdatedError
 from .models import Features, PassageModeConfig, State, WebhookEvent
-from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -199,7 +198,7 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
         if event.id != self.lock_id:
             return
 
-        _LOGGER.info("Lock %s received %s", self.unique_id, event)
+        _LOGGER.debug("Lock %s received %s", self.unique_id, event)
 
         if not event.success:
             return
@@ -267,8 +266,6 @@ class LockUpdateCoordinator(DataUpdateCoordinator[LockState]):
             self.async_set_updated_data(new_data)
 
         self.hass.create_task(_auto_locked(auto_lock_delay, computed_msg_delay))
-            
-
 
     @property
     def unique_id(self) -> str:

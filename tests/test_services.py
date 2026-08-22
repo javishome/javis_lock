@@ -166,6 +166,100 @@ async def main():
         "change_passcode called once", len(fake_coordinator.api.change_calls) == 1
     )
 
+
+    # Case: type=3 period passcode success
+    result_period_ok = await svc.handle_create_passcode(
+        SimpleNamespace(
+            data={
+                "entity_id": ["lock.ttlock_abc"],
+                "passcode_name": "period-valid",
+                "type": "3",
+                "start_time": datetime(2026, 1, 1, 8, 0, 0),
+                "end_time": datetime(2026, 1, 1, 18, 0, 0),
+            }
+        )
+    )
+    check("type=3 success returns response", result_period_ok, {"ok": True, "lock_id": 123456})
+
+    # Case: type=4 cyclic passcode missing start/end
+    result_cyclic_missing = await svc.handle_create_passcode(
+        SimpleNamespace(
+            data={
+                "entity_id": ["lock.ttlock_abc"],
+                "passcode_name": "cyclic-code",
+                "type": "4",
+            }
+        )
+    )
+    check("type=4 missing start/end error", result_cyclic_missing, {"error": "Need start time and end time with cyclic passcode."})
+
+    # Case: type=4 cyclic passcode start >= end
+    result_cyclic_invalid_range = await svc.handle_create_passcode(
+        SimpleNamespace(
+            data={
+                "entity_id": ["lock.ttlock_abc"],
+                "passcode_name": "cyclic-code",
+                "type": "4",
+                "start_time": datetime(2026, 1, 1, 18, 0, 0),
+                "end_time": datetime(2026, 1, 1, 8, 0, 0),
+            }
+        )
+    )
+    check("type=4 start >= end error", result_cyclic_invalid_range, {"error": "Start time must be less than end time."})
+
+    # Case: type=4 cyclic passcode success
+    result_cyclic_ok = await svc.handle_create_passcode(
+        SimpleNamespace(
+            data={
+                "entity_id": ["lock.ttlock_abc"],
+                "passcode_name": "cyclic-valid",
+                "type": "4",
+                "start_time": datetime(2026, 1, 1, 8, 0, 0),
+                "end_time": datetime(2026, 1, 1, 18, 0, 0),
+            }
+        )
+    )
+    check("type=4 success returns response", result_cyclic_ok, {"ok": True, "lock_id": 123456})
+
+    # Case: change_passcode with keyboardPwdName only
+    result_change_name_only = await svc.handle_change_passcode(
+        SimpleNamespace(
+            data={
+                "entity_id": ["lock.ttlock_abc"],
+                "keyboardPwdId": "99",
+                "keyboardPwdName": "New Name",
+            }
+        )
+    )
+    check("change_passcode name only successful", result_change_name_only, {"ok": True})
+
+    # Case: coordinator missing branch across all handlers
+    services.coordinator_for = lambda hass, entity_id: None
+    err_create = await svc.handle_create_passcode(
+        SimpleNamespace(data={"entity_id": ["lock.invalid"], "passcode_name": "test", "type": "1"})
+    )
+    check("create passcode missing coordinator", err_create, {"error": "No coordinator found for the given entity."})
+
+    err_list = await svc.handle_list_passcodes(
+        SimpleNamespace(data={"entity_id": ["lock.invalid"]})
+    )
+    check("list passcodes missing coordinator", err_list, {"error": "No coordinator found for the given entity."})
+
+    err_cleanup = await svc.handle_cleanup_passcodes(
+        SimpleNamespace(data={"entity_id": ["lock.invalid"]})
+    )
+    check("cleanup passcodes missing coordinator", err_cleanup, {"error": "No coordinator found for the given entity."})
+
+    err_delete = await svc.handle_delete_passcode(
+        SimpleNamespace(data={"entity_id": ["lock.invalid"], "keyboardPwdId": "12"})
+    )
+    check("delete passcode missing coordinator", err_delete, {"error": "Delete passcode fail."})
+
+    err_change = await svc.handle_change_passcode(
+        SimpleNamespace(data={"entity_id": ["lock.invalid"], "keyboardPwdId": "12", "newKeyboardPwd": "123"})
+    )
+    check("change passcode missing coordinator", err_change, {"error": "Change passcode fail."})
+
     print("\n" + "=" * 64)
     if tests_failed == 0:
         print(f"ALL {tests_run} TESTS PASSED")

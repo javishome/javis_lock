@@ -225,5 +225,3 @@ update_lock:
     entity:
       integration: javis_lock
       domain: lock
-
-    

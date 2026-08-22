@@ -3,9 +3,9 @@ name: Create Release 2024_4_4
 on:
   push:
     branches:
-      - main 
+      - main
     paths:
-      - "build/2024_4_4/**"  
+      - "build/2024_4_4/**"
 permissions:
   contents: write
 

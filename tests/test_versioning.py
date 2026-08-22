@@ -165,7 +165,7 @@ with tempfile.TemporaryDirectory() as tmp:
     with patch("builtins.print"):
         old_version, new_version = release_tool.update_manifest_version(tmp)
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         data = json.load(f)
 
     check("update_manifest_version old", old_version, "v1")
@@ -188,7 +188,7 @@ with tempfile.TemporaryDirectory() as tmp:
     with patch("builtins.print"):
         old_version, new_version = release_tool.update_manifest_version(tmp)
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         data = json.load(f)
 
     check("numeric-only old version", old_version, None)
@@ -211,7 +211,7 @@ with tempfile.TemporaryDirectory() as tmp:
     with patch("builtins.print"):
         old_version, new_version = release_tool.update_manifest_version(tmp)
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         data = json.load(f)
 
     check("invalid format old version", old_version, None)

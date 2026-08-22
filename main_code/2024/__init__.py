@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import secrets
 
 from aiohttp.web import Request
-import yaml
 from homeassistant.components import cloud, persistent_notification, webhook
 from homeassistant.components.webhook import (
     async_register as webhook_register,
@@ -24,7 +22,6 @@ from homeassistant.const import (
 from homeassistant.core import CoreState, Event, HomeAssistant
 from homeassistant.helpers import (
     aiohttp_client,
-    config_entry_oauth2_flow,
     issue_registry as ir,
 )
 from homeassistant.const import __version__ as ha_version
@@ -74,7 +71,7 @@ def _read_interface_mac(interface):
         return None
     try:
         with open(
-            f"/sys/class/net/{interface}/address", "r", encoding="utf-8"
+            f"/sys/class/net/{interface}/address", encoding="utf-8"
         ) as mac_file:
             return mac_file.read().strip()
     except Exception as e:
@@ -83,6 +80,9 @@ def _read_interface_mac(interface):
 
 
 def _get_mac_details():
+    # LƯU Ý THIẾT KẾ: Quét danh sách giao diện mạng ("eth0", "end0") là cấu hình phần cứng
+    # mặc định và cố định của dòng thiết bị Javis Home Controller (HC).
+    # Không cần quét các interface khác để đảm bảo tính nhất quán định danh thiết bị.
     for interface in ("eth0", "end0"):
         mac = _read_interface_mac(interface)
         if not mac:
@@ -242,7 +242,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             translation_key="component_outdated",
         )
         return False
-    except Exception as ex:
+    except Exception:
         _LOGGER.error(f"async_setup_new: {traceback.format_exc()}\n")
         return False
     return True

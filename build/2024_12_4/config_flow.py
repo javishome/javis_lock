@@ -1,6 +1,6 @@
 """Config flow for TTLock."""
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 from .const import DOMAIN
 from .api import AUTH_SCHEMA, login
 
@@ -15,11 +15,11 @@ _LOGGER = logging.getLogger(__name__)
 class GithubCustomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Github Custom config flow."""
 
-    data: Optional[Dict[str, Any]]
+    data: dict[str, Any] | None
 
-    async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None):
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         """Invoked when a user initiates a flow via the user interface."""
-        errors: Dict[str, str] = {}
+        errors: dict[str, str] = {}
         try:
             if user_input is not None:
                 try:
