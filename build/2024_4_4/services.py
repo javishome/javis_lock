@@ -2,12 +2,12 @@
 
 """Services for javis_lock integration."""
 
-from datetime import datetime, time
+from datetime import datetime
 import logging
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID, CONF_ENABLED, WEEKDAYS
+from homeassistant.const import ATTR_ENTITY_ID
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -18,14 +18,8 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.util.dt import as_utc
 
 from .const import (
-    CONF_ALL_DAY,
-    CONF_AUTO_UNLOCK,
-    CONF_END_TIME,
-    CONF_START_TIME,
-    CONF_WEEK_DAYS,
     DOMAIN,
     SVC_CLEANUP_PASSCODES,
-    SVC_CONFIG_PASSAGE_MODE,
     SVC_CREATE_PASSCODE,
     SVC_LIST_PASSCODES,
     SVC_LIST_UNLOCK_RECORDS,
@@ -34,7 +28,7 @@ from .const import (
     SVC_UPDATE_LOCK,
 )
 from .coordinator import LockUpdateCoordinator, coordinator_for
-from .models import AddPasscodeConfig, OnOff, PassageModeConfig
+from .models import AddPasscodeConfig
 import traceback
 
 _LOGGER = logging.getLogger(__name__)
@@ -356,7 +350,7 @@ class Services:
                 return {"error": "No coordinator found for the given entity."}
             responce = await coordinator.api.add_passcode(coordinator.lock_id, config)
             return responce
-        except Exception as e:
+        except Exception:
             _LOGGER.error(f"Error creating passcode: {traceback.format_exc()}")
             return {"error": f"Error creating passcode: {traceback.format_exc()}"}
 

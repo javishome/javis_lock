@@ -23,7 +23,6 @@ from .api import TTLockApi
 from .const import DOMAIN, SIGNAL_NEW_DATA, TT_LOCKS
 from .api import ComponentOutdatedError
 from .models import Features, PassageModeConfig, State, WebhookEvent
-from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 

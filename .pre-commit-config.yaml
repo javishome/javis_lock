@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-ast
+      - id: check-json
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+  - repo: local
+    hooks:
+      - id: run-all-tests
+        name: Run Javis Lock Component Test Suite
+        entry: /home/chinh/miniconda3/envs/smartlock/bin/python tests/run_all.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: auto-encode-build
+        name: Auto-Compile Bytecode (.pyc) for Release
+        entry: bash -c "/home/chinh/miniconda3/envs/smartlock/bin/python auto_encode.py --yes && git add build/ custom_components/"
+        language: system
+        pass_filenames: false
+        always_run: true

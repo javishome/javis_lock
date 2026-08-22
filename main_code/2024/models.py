@@ -18,7 +18,7 @@ class EpochMs(datetime):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, values=None, config=None, field=None):
+    def validate(cls, v, *args, **kwargs):
         """Use homeassistant time helpers to parse epoch."""
         return dt.as_local(dt.utc_from_timestamp(v / 1000))
 
@@ -94,11 +94,11 @@ class PassageModeConfig(BaseModel):
     week_days: list[int] = Field([], alias="weekDays")  # monday = 1, sunday = 7
     auto_unlock: OnOff = Field(OnOff.unknown, alias="autoUnlock")
 
-    @validator("start_minute", pre=True, always=True, allow_reuse=True)
+    @validator("start_minute", pre=True, always=True)
     def _set_start_minute(cls, start_minute: int | None) -> int:
         return start_minute or 0
 
-    @validator("end_minute", pre=True, always=True, allow_reuse=True)
+    @validator("end_minute", pre=True, always=True)
     def _set_end_minute(cls, end_minute: int | None) -> int:
         return end_minute or 0
 
@@ -235,7 +235,7 @@ class Event:
         yield cls.validate
 
     @classmethod
-    def validate(cls, v, values=None, config=None, field=None):
+    def validate(cls, v, *args, **kwargs):
         """Validate for pydantic type."""
         if not isinstance(v, int):
             raise TypeError("int required")

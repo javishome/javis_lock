@@ -2,7 +2,6 @@
 
 import asyncio
 from collections.abc import Mapping
-from hashlib import md5
 import json
 import logging
 from secrets import token_hex
@@ -18,7 +17,8 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 import aiohttp
 
-from .const import SERVER_URL, HOST1, HOST2, HOST3, COMPONENT_VERSION
+from .const import HOST1, HOST2, HOST3
+from .const import COMPONENT_VERSION
 from .models import (
     AddPasscodeConfig,
     Features,
@@ -31,7 +31,6 @@ from .models import (
 GW_LOCK = asyncio.Lock()
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, CONF_URL
-import traceback
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,7 +62,7 @@ async def login(username: str, password: str, url_cloud: str):
                         "error": "Invalid username or password",
                         "is_success": False,
                     }
-    except Exception as e:
+    except Exception:
         _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
         return {"error": "Server disconected", "is_success": False}
 
@@ -108,7 +107,7 @@ class TTLockApi:
                     _LOGGER.info("login success")
                 else:
                     _LOGGER.error(f"login error: {str(await response.text())}")
-        except Exception as e:
+        except Exception:
             _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
 
     async def ensure_valid_token(self):
@@ -299,12 +298,18 @@ class TTLockApi:
             )
 
         if res and res.get("errcode") != 0:
-            # handle error
-
-            _LOGGER.error("Failed to unlock %s: %s", lock_id, res["errmsg"])
+            _LOGGER.error(
+                "Failed to configure passage mode for %s: %s",
+                lock_id,
+                res.get("errmsg", "Unknown error"),
+            )
             return False
 
-        return await res.json()
+        if not res:
+            _LOGGER.error("Failed to configure passage mode for %s", lock_id)
+            return False
+
+        return True
 
     async def add_passcode(self, lock_id: int, config: AddPasscodeConfig) -> bool:
         """Add new passcode."""

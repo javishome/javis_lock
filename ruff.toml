@@ -1,0 +1,23 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes (undefined variables, missing parameters, invalid kwargs)
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear (common design bugs, mutable defaults, loop variables)
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # Line too long
+    "E402",  # Module level import not at top
+    "F403",  # Star imports
+    "F405",  # Star import undefined
+    "B008",  # Depends calls
+    "B904",  # Exception chaining
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["F841", "F401", "B007"]

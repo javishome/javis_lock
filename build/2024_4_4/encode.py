@@ -8,4 +8,3 @@ for file in files_pyc:
         import py_compile
         py_compile.compile(file, cfile=file + "c")
         os.remove(file)
-

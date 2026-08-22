@@ -20,6 +20,6 @@
         "pydantic"
     ],
     "ssdp": [],
-    "version": "v20260420",
+    "version": "v20260822",
     "zeroconf": []
 }

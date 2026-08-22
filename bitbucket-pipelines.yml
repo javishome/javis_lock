@@ -1,18 +1,17 @@
-image: python:3.13
+image: alpine:latest
 
 pipelines:
-    branches:
-        main:
-            - step:
-                  script:
-                    #   - ls 
-                    #   - cp -r ./main_code/* ./build/2024_12_4/
-                    #   - cd ./build/2024_12_4/
-                    #   - python3 ./encode.py
-                    #   - cat manifest.json
-                    #   - cd ../../
-                    #   - ls ./build/2024_12_4/
-                      - rm -rf ./main_code
-                      - git add .                 
-                      - git commit -m "update code"
-                      - git push --all --force git@github.com:javishome/javis_lock.git
+  branches:
+    main:
+      - step:
+          name: Sync Release to GitHub javis_lock
+          script:
+            - apk add --no-cache git openssh-client
+            - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+            - ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null
+            - git config --global user.name "Javis CI"
+            - git config --global user.email "ci@javis.io"
+            - rm -rf ./main_code ./tests
+            - git add .
+            - git commit -m "update build ${BITBUCKET_COMMIT:0:7}" || true
+            - git push --force git@github.com:javishome/javis_lock.git HEAD:main
