@@ -147,7 +147,7 @@ class Services:
     def register_new(self) -> None:
         """Register services for javis_lock integration."""
         # Tạo passcode
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_CREATE_PASSCODE,
             self.handle_create_passcode,
@@ -164,7 +164,7 @@ class Services:
         )
 
         # Xóa mã hết hạn
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_CLEANUP_PASSCODES,
             self.handle_cleanup_passcodes,
@@ -177,7 +177,7 @@ class Services:
         )
 
         # lấy danh sách passcode
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_LIST_PASSCODES,
             self.handle_list_passcodes,
@@ -190,7 +190,7 @@ class Services:
         )
 
         # lấy danh sách unlock record
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_LIST_UNLOCK_RECORDS,
             self.handle_list_unlock_records,
@@ -205,7 +205,7 @@ class Services:
         )
 
         # delete passcode
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_DELETE_PASSCODE,
             self.handle_delete_passcode,
@@ -219,7 +219,7 @@ class Services:
         )
 
         # change passcode
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_CHANGE_PASSCODE,
             self.handle_change_passcode,
@@ -235,7 +235,7 @@ class Services:
         )
 
         # update lock state
-        self.hass.services.register(
+        self.hass.services.async_register(
             DOMAIN,
             SVC_UPDATE_LOCK,
             self.update_lock_state,

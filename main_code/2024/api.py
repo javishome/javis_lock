@@ -92,8 +92,11 @@ class TTLockApi:
         self.password = password
         self.base_url = f"{url}/api/"
         self._version_headers = {"X-Component-Version": COMPONENT_VERSION}
+        self.token = None
+        self.start_time = 0
+        self.expires_in = 0
 
-    async def login(self):
+    async def login(self) -> bool:
         url_login = self.base_url + "login"
         data = {"username": self.username, "password": self.password}
         try:
@@ -101,20 +104,26 @@ class TTLockApi:
                 url_login, json=data, headers=self._version_headers
             ) as response:
                 if response.status == 200:
-                    self.token = (await response.json())["access_token"]
+                    res_json = await response.json()
+                    self.token = res_json.get("access_token")
                     self.start_time = int(time.time() * 1000)
-                    self.expires_in = (await response.json())["expires_in"]
-                    _LOGGER.info("login success")
+                    self.expires_in = res_json.get("expires_in", 7200)
+                    _LOGGER.info("Login success")
+                    return True
                 else:
-                    _LOGGER.error(f"login error: {str(await response.text())}")
-        except Exception:
-            _LOGGER.error(f"login error 1: {traceback.format_exc()}\n")
+                    body = await response.text()
+                    _LOGGER.error("Login error (HTTP %s): %s", response.status, body[:200])
+                    return False
+        except Exception as err:
+            _LOGGER.error("Login exception: %s", err)
+            return False
 
     async def ensure_valid_token(self):
-        if not hasattr(self, "token"):
-            await self.login()
-        elif int(time.time() * 1000) - self.start_time > self.expires_in:
-            await self.login()
+        now_ms = int(time.time() * 1000)
+        if not self.token or (now_ms - self.start_time > self.expires_in):
+            ok = await self.login()
+            if not ok or not self.token:
+                raise RequestFailed("Authentication failed: unable to obtain access token from server.")
 
     async def _parse_resp(self, resp: ClientResponse, log_id: str) -> Mapping[str, Any]:
         if resp.status == 426:
@@ -221,6 +230,8 @@ class TTLockApi:
     async def get_locks(self) -> list[int]:
         """Enumerate all locks in the account."""
         res = await self.get("lock/list")
+        if not res or not isinstance(res, dict) or "list" not in res:
+            return []
 
         def lock_connectable(lock) -> bool:
             has_gateway = lock.get("hasGateway") != 0

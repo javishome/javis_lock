@@ -77,7 +77,7 @@ async def main():
 
         # Execute component setup to register domain services
         comp.setup(hass, {})
-        services = list(hass.services.services.get(domain, {}).keys())
+        services = list(hass.services.async_services().get(domain, {}).keys())
         print(f"  PASS: Registered {len(services)} services for {domain} in HA Core: {services}")
         if not services:
             print(f"  FAIL: No services registered for {domain}")
@@ -96,6 +96,9 @@ async def main():
     except Exception as e:
         print(f"  FAIL: Module reload raised: {e}")
         sys.exit(1)
+    
+    import os
+    os._exit(0)
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -144,10 +147,10 @@ def run_container_test(target):
         # 2. Run Real HA Component Loader Test in container
         print("[*] Executing HA Loader, Service Registry & Validator tests in container...")
         cmd = [
-            "docker", "run", "--rm",
+            "docker", "run", "--rm", "--entrypoint", "python3",
             "-v", f"{temp_dir}:/config",
             image,
-            "python3", "/config/test_loader.py", DOMAIN,
+            "/config/test_loader.py", DOMAIN,
         ]
         test_proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
         print(test_proc.stdout)
@@ -159,10 +162,10 @@ def run_container_test(target):
         # 3. Run check_config
         print("[*] Running hass --script check_config inside container...")
         check_cmd = [
-            "docker", "run", "--rm",
+            "docker", "run", "--rm", "--entrypoint", "hass",
             "-v", f"{temp_dir}:/config",
             image,
-            "hass", "--config", "/config", "--script", "check_config",
+            "--config", "/config", "--script", "check_config",
         ]
         check_proc = subprocess.run(check_cmd, capture_output=True, text=True, timeout=120)
         if check_proc.returncode == 0:
