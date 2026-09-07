@@ -1,6 +1,7 @@
 """API for TTLock bound to Home Assistant OAuth."""
 
 import asyncio
+import socket
 from collections.abc import Mapping
 import json
 import logging
@@ -67,6 +68,18 @@ async def login(username: str, password: str, url_cloud: str):
         return {"error": "Server disconected", "is_success": False}
 
 
+class CannotConnectError(Exception):
+    """Raised when connection to server fails due to network or DNS issue."""
+
+    pass
+
+
+class InvalidAuthError(Exception):
+    """Raised when server rejects authentication credentials."""
+
+    pass
+
+
 class RequestFailed(Exception):
     """Exception when TTLock API returns an error."""
 
@@ -110,20 +123,32 @@ class TTLockApi:
                     self.expires_in = res_json.get("expires_in", 7200)
                     _LOGGER.info("Login success")
                     return True
-                else:
+                elif response.status == 426:
+                    body = await response.text()
+                    _LOGGER.error("Component version outdated (HTTP 426): %s", body)
+                    raise ComponentOutdatedError(
+                        "Component version outdated. Please update javis_lock to the latest version."
+                    )
+                elif response.status in (400, 401, 403):
                     body = await response.text()
                     _LOGGER.error("Login error (HTTP %s): %s", response.status, body[:200])
-                    return False
-        except Exception as err:
-            _LOGGER.error("Login exception: %s", err)
-            return False
+                    raise InvalidAuthError(f"Invalid credentials or auth error (HTTP {response.status})")
+                else:
+                    body = await response.text()
+                    _LOGGER.error("Server error during login (HTTP %s): %s", response.status, body[:200])
+                    raise CannotConnectError(f"Server error during login: HTTP {response.status}")
+        except (ComponentOutdatedError, InvalidAuthError, CannotConnectError):
+            raise
+        except (aiohttp.ClientError, socket.gaierror, TimeoutError, OSError) as err:
+            _LOGGER.error("Login connection exception: %s", err)
+            raise CannotConnectError(f"Cannot connect to host: {err}") from err
 
     async def ensure_valid_token(self):
         now_ms = int(time.time() * 1000)
         if not self.token or (now_ms - self.start_time > self.expires_in):
             ok = await self.login()
             if not ok or not self.token:
-                raise RequestFailed("Authentication failed: unable to obtain access token from server.")
+                raise InvalidAuthError("Authentication failed: unable to obtain access token from server.")
 
     async def _parse_resp(self, resp: ClientResponse, log_id: str) -> Mapping[str, Any]:
         if resp.status == 426:

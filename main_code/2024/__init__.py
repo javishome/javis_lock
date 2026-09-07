@@ -7,12 +7,15 @@ import logging
 import secrets
 
 from aiohttp.web import Request
+import aiohttp
 from homeassistant.components import cloud, persistent_notification, webhook
 from homeassistant.components.webhook import (
     async_register as webhook_register,
     async_unregister as webhook_unregister,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ConfigEntryNotReady, ConfigEntryAuthFailed
+import socket
 from homeassistant.const import (
     CONF_WEBHOOK_ID,
     EVENT_HOMEASSISTANT_STARTED,
@@ -27,7 +30,7 @@ from homeassistant.helpers import (
 from homeassistant.const import __version__ as ha_version
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.network import NoURLAvailableError
-from .api import TTLockApi, ComponentOutdatedError
+from .api import TTLockApi, ComponentOutdatedError, CannotConnectError, InvalidAuthError
 from .const import (
     CONF_WEBHOOK_STATUS,
     CONF_WEBHOOK_URL,
@@ -242,6 +245,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             translation_key="component_outdated",
         )
         return False
+    except (CannotConnectError, aiohttp.ClientError, socket.gaierror, TimeoutError, OSError) as err:
+        _LOGGER.warning("Không thể kết nối máy chủ SmartLock (%s): %s. Sẽ tự động thử lại khi có mạng.", url, err)
+        raise ConfigEntryNotReady(f"Không thể kết nối máy chủ SmartLock ({url}): {err}") from err
+    except InvalidAuthError as err:
+        _LOGGER.error("Xác thực SmartLock thất bại cho tài khoản %s: %s", username, err)
+        raise ConfigEntryAuthFailed(f"Xác thực thất bại: {err}") from err
     except Exception:
         _LOGGER.error(f"async_setup_new: {traceback.format_exc()}\n")
         return False
