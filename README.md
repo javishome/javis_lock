@@ -5,8 +5,6 @@
 - **1 bản cài đặt duy nhất**: Tương thích mượt mà với mọi phiên bản Home Assistant (từ HA 2024 đến HA 2025+).
 - **Bảo vệ mã nguồn an toàn**: Tự động mã hóa code bảo mật mà không làm ảnh hưởng đến tốc độ chạy.
 - **Khởi chạy mượt mà**: Sửa lỗi luồng, đảm bảo không bị treo hay xung đột khi Home Assistant khởi động và gọi dịch vụ.
-- **Kiểm thử toàn diện**: Đạt 100% trên các bài test tự động và thiết bị Home Assistant thực tế.
-- **Tối ưu cập nhật**: Chuẩn hóa đóng gói để cài đặt và nâng cấp dễ dàng, ổn định qua HACS.
 
 ### Ngày 22/08/2026 (Version v20260822)
 - Sửa lỗi trả về boolean an toàn khi cài đặt Passage Mode.
