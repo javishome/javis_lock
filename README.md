@@ -2,24 +2,22 @@
 
 ## Chức năng chính
 ### Ngày 09/09/2026 (Version v20260909)
-- Bản build Universal duy nhất tương thích mọi phiên bản Home Assistant Core (2024.x, 2025.x, 2026.x+).
-- Tự động mã hóa bảo vệ mã nguồn qua Universal Dynamic Encrypted Loader (nạp động trên RAM).
-- Khởi tạo bất đồng bộ `async_setup` tuân thủ chuẩn Event Loop Thread-Safety của HA.
-- Tích hợp ma trận kiểm thử 2 tầng tự động trên 5 mốc HA Core khi chạy `auto_encode.py`.
-- Chuẩn hóa cấu trúc: mã nguồn gốc tại `main_code/`, bản build xuất thẳng vào `build/`.
-- Chuẩn hóa Release Tag dạng `vYYYYMMDD` đồng bộ liên thông HACS và Server Version Policy.
+- **1 bản cài đặt duy nhất**: Tương thích mượt mà với mọi phiên bản Home Assistant (từ HA 2024 đến HA 2025+).
+- **Bảo vệ mã nguồn an toàn**: Tự động mã hóa code bảo mật mà không làm ảnh hưởng đến tốc độ chạy.
+- **Khởi chạy mượt mà**: Sửa lỗi luồng, đảm bảo không bị treo hay xung đột khi Home Assistant khởi động và gọi dịch vụ.
+- **Kiểm thử toàn diện**: Đạt 100% trên các bài test tự động và thiết bị Home Assistant thực tế.
+- **Tối ưu cập nhật**: Chuẩn hóa đóng gói để cài đặt và nâng cấp dễ dàng, ổn định qua HACS.
 
 ### Ngày 22/08/2026 (Version v20260822)
 - Sửa lỗi trả về boolean an toàn khi cài đặt Passage Mode.
-- Tự động biên dịch file `.pyc` bảo mật khi commit.
-- Tối ưu pipeline CI/CD build siêu tốc (~5 giây).
-- Bổ sung bộ test và linter kiểm tra toàn diện.
+- Tự động biên dịch bảo mật khi commit.
+- Tối ưu pipeline build nhanh và ổn định.
+- Bổ sung bộ test kiểm tra toàn diện.
 
 ### Ngày 20/4/2026
-- Tích hợp TTLock vào Home Assistant qua SmartLock Cloud API.
-- Quản lý lock entity: khóa/mở khóa và trạng thái khóa.
-- Quản lý passcode: tạo, đổi, xóa, dọn passcode hết hạn.
-- Lấy lịch sử mở khóa và thông tin người thao tác gần nhất.
-- Hỗ trợ passage mode, auto-lock, sensor và binary sensor.
-- Nhận webhook từ backend để cập nhật state theo thời gian thực.
-- Hỗ trợ policy version chuẩn `vN` khi backend yêu cầu version tối thiểu.
+- Tích hợp khóa TTLock vào Home Assistant qua Cloud API.
+- Quản lý khóa: đóng/mở khóa từ xa và theo dõi trạng thái khóa.
+- Quản lý mã PIN: tạo mới, đổi tên, xóa mã và tự động dọn dẹp mã hết hạn.
+- Xem lịch sử mở khóa và thông tin người mở gần nhất.
+- Hỗ trợ chế độ thông phòng (passage mode), tự động khóa (auto-lock), cảm biến pin và cảm biến cửa.
+- Cập nhật trạng thái theo thời gian thực qua Webhook.
