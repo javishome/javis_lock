@@ -176,13 +176,14 @@ async def sync_webhooks_to_server(
 
 
 def is_new_version():
-    year, version = ha_version.split(".")[:2]
-    if int(year) >= 2024 and int(version) >= 7:
+    try:
+        parts = [int(x) for x in ha_version.split(".")[:2]]
+        return (parts[0], parts[1]) >= (2024, 7)
+    except Exception:
         return True
-    return False
 
 
-def setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
+async def async_setup(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the TTLock component."""
     if is_new_version():
         Services(hass).register_new()

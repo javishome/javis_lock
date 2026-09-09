@@ -1,0 +1,54 @@
+name: Release Javis Lock Universal
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "build/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from manifest.json
+        id: get_version
+        run: |
+          RAW_VERSION=$(jq -r '.version' build/manifest.json)
+          if [[ $RAW_VERSION != v* ]]; then
+            VERSION="v${RAW_VERSION}"
+          else
+            VERSION="${RAW_VERSION}"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Delete old release and tag (if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete "${{ env.VERSION }}" --cleanup-tag -y || true
+
+      - name: ZIP Universal Component
+        run: |
+          cd ${{ github.workspace }}/build
+          zip -r ${{ github.workspace }}/javis_lock.zip ./
+
+      - name: Create GitHub Release and Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ env.VERSION }}"
+          release_name: "Release ${{ env.VERSION }}"
+          body: "### Changelog\n\n- Bản phát hành Universal tương thích toàn bộ phiên bản Home Assistant Core: ${{ env.VERSION }}."
+          draft: false
+          prerelease: false
+          files: ${{ github.workspace }}/javis_lock.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
